@@ -1,0 +1,14 @@
+FROM node:20.17.0-bookworm
+
+ENV PNPM_HOME="/usr/local/share/pnpm" \ 
+    NODE_ENV=development
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+RUN npm install
+
+COPY . .
+
+ENTRYPOINT ["/app/docker/dev-entrypoint.sh"]
+CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"]

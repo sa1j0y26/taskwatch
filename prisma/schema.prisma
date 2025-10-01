@@ -1,0 +1,160 @@
+// Prisma schema draft for Taskwatch personal project
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Visibility {
+  PRIVATE
+  FRIENDS
+  PUBLIC
+}
+
+enum EventTag {
+  STUDY
+  PERSONAL
+  WELLNESS
+  OTHER
+}
+
+enum FlexPolicy {
+  STRICT
+  FLEXIBLE
+  OPTIONAL
+}
+
+enum OccurrenceStatus {
+  SCHEDULED
+  DONE
+  MISSED
+}
+
+enum FriendshipStatus {
+  PENDING
+  ACCEPTED
+  BLOCKED
+}
+
+enum ReactionType {
+  LIKE
+  BAD
+}
+
+model User {
+  id             String          @id @default(cuid())
+  email          String          @unique
+  name           String
+  avatar         String?
+  xp             Int             @default(0)
+  level          Int             @default(1)
+  streak_count   Int             @default(0)
+  timezone       String?
+  created_at     DateTime        @default(now())
+  updated_at     DateTime        @updatedAt
+
+  events         Event[]
+  occurrences    Occurrence[]
+  timeline_posts TimelinePost[]
+  reactions      Reaction[]
+  friendships    Friendship[]    @relation("UserFriends")
+  friend_of      Friendship[]    @relation("FriendUsers")
+
+  @@index([name])
+  @@map("users")
+}
+
+model Event {
+  id               String          @id @default(cuid())
+  user_id          String
+  title            String
+  description      String?
+  tag              EventTag        @default(STUDY)
+  visibility       Visibility      @default(FRIENDS)
+  duration_minutes Int
+  rrule            String?
+  exdates          DateTime[]      @default([])
+  flex_policy      FlexPolicy      @default(STRICT)
+  created_at       DateTime        @default(now())
+  updated_at       DateTime        @updatedAt
+
+  user             User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  occurrences      Occurrence[]
+
+  @@index([user_id, visibility])
+  @@index([tag])
+  @@map("events")
+}
+
+model Occurrence {
+  id             String           @id @default(cuid())
+  event_id       String
+  user_id        String
+  start_at       DateTime
+  end_at         DateTime
+  status         OccurrenceStatus @default(SCHEDULED)
+  completed_at   DateTime?
+  notes          String?
+  created_at     DateTime         @default(now())
+  updated_at     DateTime         @updatedAt
+
+  event          Event            @relation(fields: [event_id], references: [id], onDelete: Cascade)
+  user           User             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  timeline_posts TimelinePost[]
+
+  @@index([user_id, status])
+  @@index([event_id, start_at])
+  @@map("occurrences")
+}
+
+model TimelinePost {
+  id             String       @id @default(cuid())
+  user_id        String
+  occurrence_id  String?
+  message        String
+  visibility     Visibility   @default(FRIENDS)
+  created_at     DateTime     @default(now())
+  updated_at     DateTime     @updatedAt
+
+  user           User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  occurrence     Occurrence?  @relation(fields: [occurrence_id], references: [id], onDelete: SetNull)
+  reactions      Reaction[]
+
+  @@index([user_id, visibility])
+  @@map("timeline_posts")
+}
+
+model Reaction {
+  id         String        @id @default(cuid())
+  post_id    String
+  user_id    String
+  type       ReactionType
+  created_at DateTime      @default(now())
+
+  post       TimelinePost  @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  user       User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([post_id, user_id])
+  @@index([user_id])
+  @@map("reactions")
+}
+
+model Friendship {
+  id              String           @id @default(cuid())
+  user_id         String
+  friend_user_id  String
+  status          FriendshipStatus @default(PENDING)
+  created_at      DateTime         @default(now())
+  updated_at      DateTime         @updatedAt
+
+  user            User             @relation("UserFriends", fields: [user_id], references: [id], onDelete: Cascade)
+  friend          User             @relation("FriendUsers", fields: [friend_user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, friend_user_id])
+  @@index([friend_user_id])
+  @@map("friendships")
+}
