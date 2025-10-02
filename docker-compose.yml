@@ -16,7 +16,7 @@ services:
     command: ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"]
 
   db:
-    image: postgres:16-alpine
+    image: postgres:18
     ports:
       - "5432:5432"
     environment:
