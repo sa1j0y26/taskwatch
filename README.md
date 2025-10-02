@@ -20,6 +20,7 @@ Docker Compose を利用して Next.js と PostgreSQL を立ち上げます。
    ```bash
    docker compose exec web npx prisma migrate dev --name init
    ```
+   - PostgreSQL 18 では `uuidv7()` が標準提供されるため追加拡張は不要です。
 4. ブラウザでアプリを確認: <http://localhost:${WEB_PORT:-3000}>
 
 ### よく使うコマンド

@@ -11,21 +11,7 @@ datasource db {
 
 enum Visibility {
   PRIVATE
-  FRIENDS
   PUBLIC
-}
-
-enum EventTag {
-  STUDY
-  PERSONAL
-  WELLNESS
-  OTHER
-}
-
-enum FlexPolicy {
-  STRICT
-  FLEXIBLE
-  OPTIONAL
 }
 
 enum OccurrenceStatus {
@@ -34,26 +20,19 @@ enum OccurrenceStatus {
   MISSED
 }
 
-enum FriendshipStatus {
-  PENDING
-  ACCEPTED
-  BLOCKED
-}
-
 enum ReactionType {
   LIKE
   BAD
 }
 
 model User {
-  id             String          @id @default(cuid())
+  id             String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
   email          String          @unique
   name           String
   avatar         String?
   xp             Int             @default(0)
   level          Int             @default(1)
   streak_count   Int             @default(0)
-  timezone       String?
   created_at     DateTime        @default(now())
   updated_at     DateTime        @updatedAt
 
@@ -61,24 +40,22 @@ model User {
   occurrences    Occurrence[]
   timeline_posts TimelinePost[]
   reactions      Reaction[]
-  friendships    Friendship[]    @relation("UserFriends")
-  friend_of      Friendship[]    @relation("FriendUsers")
+  friendships_as_a Friendship[] @relation("FriendshipUserA")
+  friendships_as_b Friendship[] @relation("FriendshipUserB")
 
   @@index([name])
   @@map("users")
 }
 
 model Event {
-  id               String          @id @default(cuid())
-  user_id          String
+  id               String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  user_id          String          @db.Uuid
   title            String
   description      String?
-  tag              EventTag        @default(STUDY)
-  visibility       Visibility      @default(FRIENDS)
+  visibility       Visibility      @default(PRIVATE)
   duration_minutes Int
   rrule            String?
   exdates          DateTime[]      @default([])
-  flex_policy      FlexPolicy      @default(STRICT)
   created_at       DateTime        @default(now())
   updated_at       DateTime        @updatedAt
 
@@ -86,14 +63,13 @@ model Event {
   occurrences      Occurrence[]
 
   @@index([user_id, visibility])
-  @@index([tag])
   @@map("events")
 }
 
 model Occurrence {
-  id             String           @id @default(cuid())
-  event_id       String
-  user_id        String
+  id             String           @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  event_id       String           @db.Uuid
+  user_id        String           @db.Uuid
   start_at       DateTime
   end_at         DateTime
   status         OccurrenceStatus @default(SCHEDULED)
@@ -112,11 +88,11 @@ model Occurrence {
 }
 
 model TimelinePost {
-  id             String       @id @default(cuid())
-  user_id        String
-  occurrence_id  String?
+  id             String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  user_id        String       @db.Uuid
+  occurrence_id  String?      @db.Uuid
   message        String
-  visibility     Visibility   @default(FRIENDS)
+  visibility     Visibility   @default(PRIVATE)
   created_at     DateTime     @default(now())
   updated_at     DateTime     @updatedAt
 
@@ -129,9 +105,9 @@ model TimelinePost {
 }
 
 model Reaction {
-  id         String        @id @default(cuid())
-  post_id    String
-  user_id    String
+  id         String        @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  post_id    String        @db.Uuid
+  user_id    String        @db.Uuid
   type       ReactionType
   created_at DateTime      @default(now())
 
@@ -144,17 +120,16 @@ model Reaction {
 }
 
 model Friendship {
-  id              String           @id @default(cuid())
-  user_id         String
-  friend_user_id  String
-  status          FriendshipStatus @default(PENDING)
-  created_at      DateTime         @default(now())
-  updated_at      DateTime         @updatedAt
+  id             String      @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  user_a_id      String      @db.Uuid
+  user_b_id      String      @db.Uuid
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
 
-  user            User             @relation("UserFriends", fields: [user_id], references: [id], onDelete: Cascade)
-  friend          User             @relation("FriendUsers", fields: [friend_user_id], references: [id], onDelete: Cascade)
+  user_a         User        @relation("FriendshipUserA", fields: [user_a_id], references: [id], onDelete: Cascade)
+  user_b         User        @relation("FriendshipUserB", fields: [user_b_id], references: [id], onDelete: Cascade)
 
-  @@unique([user_id, friend_user_id])
-  @@index([friend_user_id])
+  @@unique([user_a_id, user_b_id])
+  @@index([user_b_id])
   @@map("friendships")
 }

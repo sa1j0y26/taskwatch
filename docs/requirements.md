@@ -99,7 +99,7 @@
 
 **events**
 
-- id, user\_id, title, description, tag, duration, rrule, exdates, visibility, flex\_policy
+- id, user\_id, title, description, duration, rrule, exdates, visibility
     
 
 **occurrences**
@@ -119,7 +119,7 @@
 
 **friendships**
 
-- id, user\_id, friend\_user\_id, status
+- id, user_a_id, user_b_id, created_at
     
 
 ---

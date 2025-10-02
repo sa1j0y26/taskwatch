@@ -3,7 +3,7 @@
 ## 1. 概要
 
 - Next.js フロントエンド (`web` コンテナ)
-- PostgreSQL 16 (`db` コンテナ)
+- PostgreSQL 18 (`db` コンテナ)
 - Prisma CLI は `web` コンテナ内から実行
 
 `docker-compose.yml` と `Dockerfile.dev` を利用して、開発環境をコンテナで再現します。
@@ -31,7 +31,9 @@
    ```bash
    docker compose exec web npx prisma migrate dev --name init
    ```
+   - PostgreSQL 18 では `uuidv7()` が標準提供されるため追加拡張は不要です。
 5. Next.js 開発サーバーへアクセス: <http://localhost:${WEB_PORT:-3000}>
+
 
 ## 4. よく使うコマンド
 
