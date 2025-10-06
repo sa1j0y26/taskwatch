@@ -62,9 +62,11 @@
 
 ### バックエンド
 
-- **NestJS (TypeScript)**
+- **Next.js (App Router)**
     
-    - REST APIを提供
+    - Route Handler / Server Action で REST API を提供
+    
+- 認証: Auth.js (NextAuth) + Google OAuth
         
 
 ### データベース
@@ -76,9 +78,7 @@
 
 ### インフラ
 
-- フロント：Vercel
-    
-- バックエンド：Render
+- Vercel（フロント/バックエンド一体運用）
     
 
 ### リアルタイム
