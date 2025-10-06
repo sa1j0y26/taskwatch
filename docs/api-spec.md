@@ -1,11 +1,11 @@
 # API Specification Draft
 
-Taskwatch API の詳細設計ドラフト。NestJS を前提とし、REST + WebSocket で提供する。
+Taskwatch API の詳細設計ドラフト。Next.js の Route Handler / Server Action を前提とし、REST + WebSocket で提供する。
 
 ## 1. 共通仕様
 
 - **Base URL (local)**: `http://localhost:3000/api`
-- **認証方式**: HTTP Bearer (JWT)。`Authorization: Bearer <token>`。
+- **認証方式**: Auth.js (NextAuth) のセッションクッキー / JWT。Route Handler では `auth()` でセッションを検証。
 - **レスポンス形式**: すべて JSON。成功時は `data` ルート、失敗時は `error` オブジェクトを返す。
 - **タイムゾーン**: 受信/返却ともに ISO 8601（UTC）。クライアント側でローカルタイムゾーンに変換。
 - **ID**: すべて UUID v7 形式。PostgreSQL 18 の `uuidv7()` を利用。
@@ -114,35 +114,20 @@ Taskwatch API の詳細設計ドラフト。NestJS を前提とし、REST + WebS
 
 ## 3. エンドポイント詳細
 
-### 3.1 Authentication
+### 3.1 Authentication (Auth.js)
 
-#### POST /auth/register
-- **概要**: 新規ユーザー登録。
-- **body**:
-  - `email` (必須, email)
-  - `password` (必須, 8〜72 文字)
-  - `name` (必須, 1〜50 文字)
-- **成功 (201)**:
-  ```json
-  {
-    "data": {
-      "token": "jwt",
-      "user": { ...User }
-    }
-  }
-  ```
-- **エラー**: `USER_ALREADY_EXISTS` (409), バリデーションエラー (422)。
+- Auth.js (NextAuth) の Google OAuth プロバイダを利用し、`/api/auth/[...nextauth]` がサインイン/アウト/セッション確認を提供する。
+- クライアント側は `signIn('google')` / `signOut()` を利用。成功時は NextAuth のセッションクッキー（`session.strategy = "jwt"`）がセットされる。
+- Route Handler や Server Action では `auth()` でセッションを取得し、`session?.user.id` を元に認可処理を行う。
+- 独自の `POST /auth/register` エンドポイントは持たず、OAuth によるアカウント作成をそのまま採用する。
 
-#### POST /auth/login
-- **概要**: ログイン。
-- **body**: `{ "email": "", "password": "" }`
-- **成功 (200)**: register と同形式。
-- **エラー**: `INVALID_CREDENTIALS` (401), ロックアウト時 `ACCOUNT_LOCKED` (423)。
+#### GET /api/auth/session (Auth.js)
+- **概要**: NextAuth のセッション情報取得。
+- **成功 (200)**: Auth.js の標準レスポンス。
 
-#### GET /auth/me
-- **概要**: 自分のプロフィール取得。
-- **認証**: 必須。
-- **成功 (200)**: `{ "data": { "user": { ...User } } }`
+#### POST /api/auth/signout (Auth.js)
+- **概要**: セッション破棄。
+- **成功 (302)**: 既定でリダイレクト。API 経由で使う場合は `redirect: false` を指定。
 
 ### 3.2 Users & Friendships
 
@@ -380,4 +365,4 @@ Taskwatch API の詳細設計ドラフト。NestJS を前提とし、REST + WebS
 
 ---
 
-この仕様をベースに NestJS の DTO / Swagger ドキュメントを用意し、開発と同時に更新していく。EOF
+この仕様をベースに Next.js の Route Handler 用スキーマ（Zod 等）を整備し、開発と同時に更新していく。EOF

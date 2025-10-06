@@ -9,7 +9,8 @@
 
 2. **アーキテクチャ設計フェーズ**
    - Next.js + Tailwind の画面構成、コンポーネント指針を検討。
-   - NestJS のサービス分割やモジュール境界をまとめる。
+   - Next.js Route Handler や Server Action の責務境界を整理する。
+   - Auth.js (NextAuth) の OAuth プロバイダ構成とセッション戦略を決める。
    - PostgreSQL スキーマと Prisma の設計方針を決める。
    - ローカル開発環境（Docker Compose など）と lint/test 用スクリプト案を用意。
 
