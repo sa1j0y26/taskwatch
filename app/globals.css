@@ -1,26 +1,178 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #eef8f2;
+  --foreground: #181d1b;
+  --text-strong: #121614;
+  --forest: #0b5d3c;
+  --forest-muted: #15895a;
+  --strap: #bae5c9;
+  --muted: #4b5752;
+  --surface: #ffffff;
+  --accent: #0f7a4b;
+  --accent-soft: #c9efd8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #071d14;
+    --foreground: #e4f3ea;
+    --text-strong: #e9f7ee;
+    --forest: #4fd19f;
+    --forest-muted: #379c73;
+    --strap: #1b3f2d;
+    --muted: #a7d6bc;
+    --surface: #0f2a1d;
+    --accent: #4fd19f;
+    --accent-soft: #18412e;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-forest: var(--forest);
+  --color-muted: var(--muted);
+  --color-strap: var(--strap);
+  --color-surface: var(--surface);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", sans-serif;
+}
+
+.bg-background {
+  background-color: var(--background);
+}
+
+.text-foreground {
+  color: var(--foreground);
+}
+
+.bg-surface {
+  background-color: var(--surface);
+}
+
+.bg-forest {
+  background-color: var(--forest);
+}
+
+.text-forest {
+  color: var(--text-strong);
+}
+
+.text-muted {
+  color: var(--muted);
+}
+
+.text-accent {
+  color: var(--text-strong);
+}
+
+.border-strap {
+  border-color: var(--strap);
+}
+
+.bg-forest-muted {
+  background-color: var(--forest-muted);
+}
+
+.hover\:bg-forest-muted:hover {
+  background-color: var(--forest-muted);
+}
+
+.border-strap\/30 {
+  border-color: color-mix(in srgb, var(--strap) 30%, transparent);
+}
+
+.border-strap\/20 {
+  border-color: color-mix(in srgb, var(--strap) 20%, transparent);
+}
+
+.border-strap\/40 {
+  border-color: color-mix(in srgb, var(--strap) 40%, transparent);
+}
+
+.border-strap\/50 {
+  border-color: color-mix(in srgb, var(--strap) 50%, transparent);
+}
+
+.border-strap\/60 {
+  border-color: color-mix(in srgb, var(--strap) 60%, transparent);
+}
+
+.border-forest\/70 {
+  border-color: color-mix(in srgb, var(--forest) 70%, transparent);
+}
+
+.border-accent\/40 {
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.bg-forest\/80 {
+  background-color: color-mix(in srgb, var(--forest) 80%, transparent);
+}
+
+.bg-forest\/20 {
+  background-color: color-mix(in srgb, var(--forest) 20%, transparent);
+}
+
+.bg-forest\/15 {
+  background-color: color-mix(in srgb, var(--forest) 15%, transparent);
+}
+
+.bg-forest\/10 {
+  background-color: color-mix(in srgb, var(--forest) 10%, transparent);
+}
+
+.bg-forest\/5 {
+  background-color: color-mix(in srgb, var(--forest) 5%, transparent);
+}
+
+.text-forest\/90 {
+  color: color-mix(in srgb, var(--text-strong) 90%, white);
+}
+
+.text-forest\/80 {
+  color: color-mix(in srgb, var(--text-strong) 80%, white);
+}
+
+.bg-strap\/70 {
+  background-color: color-mix(in srgb, var(--strap) 70%, transparent);
+}
+
+.bg-strap\/60 {
+  background-color: color-mix(in srgb, var(--strap) 60%, transparent);
+}
+
+.bg-strap\/50 {
+  background-color: color-mix(in srgb, var(--strap) 50%, transparent);
+}
+
+.bg-strap\/40 {
+  background-color: color-mix(in srgb, var(--strap) 40%, transparent);
+}
+
+.bg-accent {
+  background-color: var(--accent);
+  color: color-mix(in srgb, var(--accent) 20%, white);
+}
+
+.bg-accent-soft {
+  background-color: var(--accent-soft);
+}
+
+.bg-accent\/15 {
+  background-color: color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.text-accent\/90 {
+  color: color-mix(in srgb, var(--text-strong) 90%, white);
 }

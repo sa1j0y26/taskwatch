@@ -185,6 +185,7 @@ Taskwatch API の詳細設計ドラフト。Next.js の Route Handler / Server A
   - `userId` (任意, フレンドのみアクセス可)
   - `visibility`
   - `withOccurrences` (bool, 最新の occurrences を含めるか)
+- **備考**: カレンダー UI でタイムブロックを描画するため、`startAt` / `endAt` を中心とした occurrences を取得できるようにする。
 - **成功 (200)**: イベント配列 + オプションで occurrences。
 
 #### GET /events/:id
