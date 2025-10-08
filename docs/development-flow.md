@@ -11,6 +11,7 @@
    - Next.js + Tailwind の画面構成、コンポーネント指針を検討。
    - Next.js Route Handler や Server Action の責務境界を整理する。
    - Auth.js (NextAuth) の OAuth プロバイダ構成とセッション戦略を決める。
+   - レスポンシブなサイドシートナビ（モバイル）と固定サイドバー（デスクトップ）の挙動を設計。
    - PostgreSQL スキーマと Prisma の設計方針を決める。
    - ローカル開発環境（Docker Compose など）と lint/test 用スクリプト案を用意。
 
@@ -26,6 +27,7 @@
 
 5. **フロントエンド実装フェーズ**
    - ページルーティング（`/mypage`, `/calendar`, `/ranking`, `/timeline`）を scaffold。
+   - カレンダーは縦軸 = 時間のタイムブロック UI・友人切替・日付詳細表示をモックで確認。
    - デザインと UI コンポーネントを固め、カレンダー → タスク入力 → マイページ指標 → ランキング → タイムラインの順で実装。
    - API バインディングと状態管理（React Query など）を統一し、主要ユーザーフローの E2E テストを追加。
 
