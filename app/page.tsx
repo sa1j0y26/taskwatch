@@ -49,15 +49,16 @@ export default function Home() {
 
         <main className="grid gap-8 md:grid-cols-3">
           {FEATURE_CARDS.map((feature) => (
-            <div
+            <Link
               key={feature.title}
-              className="rounded-2xl border border-strap/40 bg-white p-6 shadow-sm"
+              href={feature.href}
+              className="rounded-2xl border border-strap/40 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
               <h2 className="text-lg font-semibold text-forest">
                 {feature.title}
               </h2>
               <p className="mt-3 text-sm text-muted">{feature.body}</p>
-            </div>
+            </Link>
           ))}
         </main>
       </div>
