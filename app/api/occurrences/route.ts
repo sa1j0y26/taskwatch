@@ -5,6 +5,7 @@ import {
   parseDate,
   serializeOccurrence,
 } from "@/lib/events/helpers"
+import { areUsersFriends } from "@/lib/friendship"
 import { prisma } from "@/lib/prisma"
 import { OccurrenceStatus } from "@prisma/client"
 
@@ -23,6 +24,16 @@ export async function GET(request: Request) {
   const startParam = searchParams.get("start")
   const endParam = searchParams.get("end")
   const statusParam = searchParams.get("status")
+  const targetUserId = searchParams.get("userId") ?? viewerId
+
+  if (targetUserId !== viewerId) {
+    const allowed = await areUsersFriends(viewerId, targetUserId)
+    if (!allowed) {
+      return jsonErrorWithStatus("FORBIDDEN", "You do not have access to this user's occurrences.", {
+        status: 403,
+      })
+    }
+  }
 
   if (!startParam || !endParam) {
     return jsonErrorWithStatus("MISSING_RANGE", "start and end query parameters are required.", {
@@ -75,7 +86,7 @@ export async function GET(request: Request) {
   try {
     const occurrences = await prisma.occurrence.findMany({
       where: {
-        user_id: viewerId,
+        user_id: targetUserId,
         start_at: {
           gte: rangeStart,
           lt: rangeEnd,

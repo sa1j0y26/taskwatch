@@ -132,25 +132,28 @@ Taskwatch API の詳細設計ドラフト。Next.js の Route Handler / Server A
 ### 3.2 Users & Friendships
 
 #### GET /users/search
-- **用途**: 友達検索。
-- **query**: `q` (必須), `limit` (任意, max 20)。
+- **用途**: 友人検索 (名前 / メール).
+- **query**: `q` (必須)。
+- **現状メモ**: 2025-02 時点では最大 10 件、ログインユーザー自身と既存フレンド判定はクライアント側で実施。
 - **認証**: 必須。
-- **成功 (200)**: `{ "data": { "results": [ { "id", "name", "avatar" } ] } }`
+- **成功 (200)**: `{ "data": { "results": [ { "id", "name", "email", "avatar" } ] } }`
 
 #### POST /friendships
-- **用途**: フレンド関係の確定（相互承認前提）。
+- **用途**: フレンド申請の送信。
 - **body**: `{ "friendUserId": "018f5b78-a1b3-7d86-b154-1d5f6d874a63" }`
-- **処理**: 自分の ID と相手の ID を昇順に並べて `friendships` レコードを 1 件作成。既に存在する場合は 409。
-- **成功 (201)**: `{ "data": { "friendship": { "id": "018f5b78-a54d-7f56-8e0a-4c97da1c0fcb", "userAId": "018f5b78-8c84-7b43-bf53-5b624eca0f0f", "userBId": "018f5b78-a1b3-7d86-b154-1d5f6d874a63" } } }`
-- **備考**: フレンド申請/承認フローはクライアント側で制御し、承認完了時に本エンドポイントを呼び出す。
+- **処理**:
+  - 申請が相手から届いている場合は自動承認し、`friendship` を返す。
+  - 未申請の場合は `friendRequest` を `PENDING` で作成。
+- **成功 (201)**: `{ "data": { "friendship"?: { ... }, "friendRequest"?: { "id", "status", "createdAt", "receiver": { ... } } } }`
+- **エラー例**: `ALREADY_FRIENDS` (409), `REQUEST_ALREADY_EXISTS` (409)。
 
 #### DELETE /friendships/:id
 - **用途**: 友達解除。
 - **成功 (204)**: ボディなし。
 
 #### GET /friendships
-- **用途**: 確定済みの友達一覧。
-- **備考**: `friendUser` は常に自分以外のユーザーを返す。
+- **用途**: 追加済みフレンド一覧。
+- **備考**: `friendUser` は常に自分以外のユーザーを返す。結果は作成日時の降順。
 - **成功 (200)**:
   ```json
   {
@@ -158,12 +161,55 @@ Taskwatch API の詳細設計ドラフト。Next.js の Route Handler / Server A
       "friendships": [
         {
           "id": "018f5b78-a54d-7f56-8e0a-4c97da1c0fcb",
-          "friendUser": { "id": "018f5b78-a1b3-7d86-b154-1d5f6d874a63", "name": "Aoi", "avatar": null }
+          "friendUser": {
+            "id": "018f5b78-a1b3-7d86-b154-1d5f6d874a63",
+            "name": "Aoi",
+            "email": "aoi@example.com",
+            "avatar": null
+          },
+          "createdAt": "2025-02-10T12:00:00.000Z"
         }
       ]
     }
   }
   ```
+
+#### GET /friendships/requests
+- **用途**: 送受信中のフレンド申請一覧。
+- **query**: `includeHistory` (任意, `true` の場合は過去ステータス含む)。
+- **成功 (200)**:
+  ```json
+  {
+    "data": {
+      "requests": {
+        "received": [
+          {
+            "id": "018f5b78-a54d-7f56-8e0a-4c97da1c0fcb",
+            "status": "PENDING",
+            "createdAt": "2025-02-10T12:00:00.000Z",
+            "respondedAt": null,
+            "requester": { "id": "018f5b78-a1b3-7d86-b154-1d5f6d874a63", "name": "Aoi", "email": "aoi@example.com", "avatar": null }
+          }
+        ],
+        "sent": [
+          {
+            "id": "018f5b78-b21c-7f56-8e0a-4c97da1c0fcb",
+            "status": "PENDING",
+            "createdAt": "2025-02-10T11:00:00.000Z",
+            "respondedAt": null,
+            "receiver": { "id": "018f5b78-c31d-7f56-8e0a-4c97da1c0fcb", "name": "Ren", "email": "ren@example.com", "avatar": null }
+          }
+        ]
+      }
+    }
+  }
+  ```
+
+#### PATCH /friendships/requests/:id
+- **用途**: 申請の承認・拒否・取り消し。
+- **body**: `{ "action": "accept" | "reject" | "cancel" }`
+- **成功 (200)**: `{ "data": { "request": { ... }, "friendship"?: { ... } } }`
+- **エラー例**: `REQUEST_NOT_FOUND` (404), `REQUEST_NOT_PENDING` (409), `FORBIDDEN` (403)。
 
 ### 3.3 Events
 
@@ -183,15 +229,15 @@ Taskwatch API の詳細設計ドラフト。Next.js の Route Handler / Server A
 - **成功 (201)**: `{ "data": { "event": { ...Event } } }`
 
 #### GET /events
-- **用途**: 認証ユーザー自身のイベント一覧取得。
+- **用途**: 認証ユーザーやフレンドのイベント一覧取得。
 - **query**:
   - `withOccurrences` (bool, 最新の occurrences を含めるか)
   - `rangeStart`, `rangeEnd` (ISO。`withOccurrences=true` 時に指定可能。未指定の場合は当日を起点に 7 日間を返却)
-- **現状メモ**: 2025-02 時点の実装では本人のイベントのみ取得可。フレンド共有は未実装。
+  - `userId` (任意): フレンド ID。指定時はフレンドシップを検証。
 - **成功 (200)**: `events: Event[]` (`withOccurrences=true` の場合は `event.occurrences` に該当期間の Occurrence を埋め込み)。
 
 #### GET /events/:id
-- **制約**: 所有者のみアクセス可。
+- **制約**: 所有者 or 承認済みフレンドのみアクセス可。
 - **query**:
   - `withOccurrences`, `rangeStart`, `rangeEnd` は一覧と同様に利用可能。
 - **成功 (200)**: `{ "data": { "event": { ...Event, "tag"?, occurrences?: Occurrence[] } } }`
@@ -212,11 +258,12 @@ Taskwatch API の詳細設計ドラフト。Next.js の Route Handler / Server A
 ### 3.4 Occurrences
 
 #### GET /occurrences
-- **用途**: 指定期間内の自分の occurrence 一覧取得。
+- **用途**: 指定期間内の occurrence 一覧取得。
 - **query**:
   - `start`/`end` (必須): ISO 文字列。範囲は 31 日以内。
+  - `userId` (任意): 友人 ID を指定すると共有フレンドの occurrence を取得。未指定は自分。
   - `status` (任意): `SCHEDULED`/`DONE`/`MISSED`。
-- **現状メモ**: 2025-02 時点では本人の occurrences のみ取得可。フレンド表示は未実装。
+- **備考**: `userId` 指定時はフレンドシップを検証し、未承認の場合は 403。
 - **成功 (200)**: `{ "data": { "occurrences": [ { ...Occurrence, "event": { "id", "title", "tag"?, "visibility" } } ] } }`
 
 #### PATCH /occurrences/:id/status

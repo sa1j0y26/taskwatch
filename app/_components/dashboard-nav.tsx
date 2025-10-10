@@ -12,6 +12,7 @@ type DashboardNavProps = {
 const NAV_ITEMS = [
   { href: "/mypage", label: "マイページ", hint: "週間の振り返り" },
   { href: "/calendar", label: "カレンダー", hint: "予定とブロック調整" },
+  { href: "/friends", label: "フレンド", hint: "友人を探す・管理" },
   { href: "/ranking", label: "ランキング", hint: "友人と競い合う" },
   { href: "/timeline", label: "タイムライン", hint: "報告を共有" },
 ]

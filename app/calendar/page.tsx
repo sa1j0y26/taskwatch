@@ -53,15 +53,14 @@ type FormState = {
   repeat: RepeatOption
 }
 
+type FriendOption = {
+  id: string
+  name: string
+}
+
 const START_HOUR = 6
 const END_HOUR = 22
 const HOUR_HEIGHT = 44
-
-const FRIENDS = [
-  { id: "me", name: "自分" },
-  { id: "aoi", name: "Aoi" },
-  { id: "ren", name: "Ren" },
-]
 
 const STATUS_LABEL: Record<OccurrenceStatus, string> = {
   SCHEDULED: "予定",
@@ -84,7 +83,14 @@ export default function CalendarPage() {
   const today = useMemo(() => startOfDay(new Date()), [])
   const todayKey = useMemo(() => formatDateKey(today), [today])
 
-  const [selectedFriend, setSelectedFriend] = useState(FRIENDS[0].id)
+  const [friendOptions, setFriendOptions] = useState<FriendOption[]>([
+    { id: "me", name: "自分" },
+  ])
+  const [friendSearch, setFriendSearch] = useState("")
+  const [friendsError, setFriendsError] = useState<string | null>(null)
+  const [isLoadingFriends, setIsLoadingFriends] = useState(true)
+
+  const [selectedFriend, setSelectedFriend] = useState("me")
   const [focusDate, setFocusDate] = useState(() => startOfWeek(today))
   const [selectedDay, setSelectedDay] = useState(todayKey)
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
@@ -108,6 +114,77 @@ export default function CalendarPage() {
 
   const weekDays = useMemo(() => buildWeekDays(focusDate), [focusDate])
 
+  const filteredFriendOptions = useMemo(() => {
+    const normalized = friendSearch.trim().toLowerCase()
+    if (!normalized) {
+      return friendOptions
+    }
+    return friendOptions.filter((option) =>
+      option.name.toLowerCase().includes(normalized),
+    )
+  }, [friendOptions, friendSearch])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadFriends = async () => {
+      setIsLoadingFriends(true)
+      setFriendsError(null)
+      try {
+        const response = await fetch("/api/friendships", {
+          method: "GET",
+          credentials: "include",
+        })
+        const body = await safeParseJSON(response)
+        if (!response.ok) {
+          const message =
+            (body && typeof body === "object" && body.error && typeof body.error.message === "string"
+              ? body.error.message
+              : null) ?? "友人一覧の取得に失敗しました。"
+          throw new Error(message)
+        }
+
+        const friends: FriendOption[] = (body?.data?.friendships ?? []).map(
+          (friendship: { friendUser: { id: string; name: string } }) => ({
+            id: friendship.friendUser.id,
+            name: friendship.friendUser.name,
+          }),
+        )
+
+        if (!cancelled) {
+          const merged = [
+            { id: "me", name: "自分" },
+            ...friends.filter((option) => option.id !== "me"),
+          ]
+          setFriendOptions(merged)
+        }
+      } catch (error) {
+        console.error("[calendar.friends]", error)
+        if (!cancelled) {
+          setFriendsError(
+            error instanceof Error ? error.message : "友人一覧の取得に失敗しました。",
+          )
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingFriends(false)
+        }
+      }
+    }
+
+    void loadFriends()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!friendOptions.some((option) => option.id === selectedFriend)) {
+      setSelectedFriend("me")
+    }
+  }, [friendOptions, selectedFriend])
+
   useEffect(() => {
     const withinWeek = weekDays.some((day) => day.key === selectedDay)
     if (!withinWeek) {
@@ -126,11 +203,15 @@ export default function CalendarPage() {
   }, [rangeStart])
 
   const fetchOccurrences = useCallback(
-    async (signal?: AbortSignal) => {
+    async (friendId: string, signal?: AbortSignal) => {
       const params = new URLSearchParams({
         start: rangeStart.toISOString(),
         end: rangeEnd.toISOString(),
       })
+
+      if (friendId !== "me") {
+        params.set("userId", friendId)
+      }
 
       const response = await fetch(`/api/occurrences?${params.toString()}`, {
         method: "GET",
@@ -204,19 +285,12 @@ export default function CalendarPage() {
   )
 
   useEffect(() => {
-    if (selectedFriend !== "me") {
-      setOccurrencesByDay({})
-      setOccurrenceIndex({})
-      setSelectedEventId(null)
-      return
-    }
-
     let cancelled = false
     const controller = new AbortController()
     setIsLoading(true)
     setLoadError(null)
 
-    fetchOccurrences(controller.signal)
+    fetchOccurrences(selectedFriend, controller.signal)
       .then((occurrences) => {
         if (!cancelled) {
           applyOccurrences(occurrences)
@@ -243,7 +317,7 @@ export default function CalendarPage() {
     }
   }, [fetchOccurrences, applyOccurrences, selectedFriend])
 
-  const dayOccurrences = selectedFriend === "me" ? occurrencesByDay[selectedDay] ?? [] : []
+  const dayOccurrences = occurrencesByDay[selectedDay] ?? []
   const selectedOccurrence = selectedEventId ? occurrenceIndex[selectedEventId] ?? null : null
   const isRecurring = Boolean(selectedOccurrence?.rrule)
 
@@ -416,7 +490,7 @@ export default function CalendarPage() {
             ? body.data.event.occurrences[0].id
             : null
 
-        const occurrences = await fetchOccurrences()
+        const occurrences = await fetchOccurrences(selectedFriend)
         applyOccurrences(occurrences, createdOccurrenceId)
 
         if (createdOccurrenceId) {
@@ -501,7 +575,7 @@ export default function CalendarPage() {
             throw new Error(message)
           }
 
-          const occurrences = await fetchOccurrences()
+        const occurrences = await fetchOccurrences(selectedFriend)
           applyOccurrences(occurrences, selectedOccurrence.id)
 
           const nextState: FormState = {
@@ -629,7 +703,7 @@ export default function CalendarPage() {
           }
         }
 
-        const occurrences = await fetchOccurrences()
+        const occurrences = await fetchOccurrences(selectedFriend)
         applyOccurrences(occurrences, selectedOccurrence.id)
 
         const nextState: FormState = {
@@ -688,7 +762,7 @@ export default function CalendarPage() {
           throw new Error(errorMessage)
         }
 
-        const occurrences = await fetchOccurrences()
+        const occurrences = await fetchOccurrences(selectedFriend)
         applyOccurrences(occurrences)
         setSelectedEventId(null)
         const nextState = createDefaultFormState(selectedDay)
@@ -704,8 +778,6 @@ export default function CalendarPage() {
       }
     })
   }
-
-  const dayOccurrencesList = selectedFriend === "me" ? dayOccurrences : []
 
   return (
     <DashboardShell
@@ -727,22 +799,42 @@ export default function CalendarPage() {
       }
     >
       <section className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex gap-2 rounded-full border border-strap/50 bg-white p-1 text-sm">
-            {FRIENDS.map((friend) => (
-              <button
-                key={friend.id}
-                type="button"
-                onClick={() => handleSelectFriend(friend.id)}
-                className={`rounded-full px-4 py-1.5 transition ${
-                  selectedFriend === friend.id
-                    ? "bg-accent text-white shadow"
-                    : "text-forest/80 hover:bg-accent-soft"
-                }`}
-              >
-                {friend.name}
-              </button>
-            ))}
+        <div className="space-y-3">
+          <div className="flex flex-col gap-2 text-sm">
+            <label className="text-xs font-medium text-muted">フレンド検索</label>
+            <input
+              value={friendSearch}
+              onChange={(event) => setFriendSearch(event.target.value)}
+              placeholder="名前で絞り込み"
+              className="w-full rounded-lg border border-strap/40 px-3 py-2"
+            />
+          </div>
+          {friendsError ? (
+            <p className="text-xs text-red-600">{friendsError}</p>
+          ) : null}
+          <div className="overflow-x-auto">
+            <div className="flex items-center gap-2 whitespace-nowrap py-1">
+              {isLoadingFriends ? (
+                <span className="text-xs text-muted">読み込み中...</span>
+              ) : filteredFriendOptions.length === 0 ? (
+                <span className="text-xs text-muted">一致するフレンドが見つかりません。</span>
+              ) : (
+                filteredFriendOptions.map((friend) => (
+                  <button
+                    key={friend.id}
+                    type="button"
+                    onClick={() => handleSelectFriend(friend.id)}
+                    className={`rounded-full border px-4 py-1.5 text-sm transition ${
+                      selectedFriend === friend.id
+                        ? "border-accent/40 bg-accent text-white shadow"
+                        : "border-strap/40 bg-white text-forest/80 hover:bg-accent-soft"
+                    }`}
+                  >
+                    {friend.name}
+                  </button>
+                ))
+              )}
+            </div>
           </div>
         </div>
 
@@ -806,11 +898,7 @@ export default function CalendarPage() {
                     ))}
                   </div>
                   <div className="relative">
-                    {selectedFriend !== "me" ? (
-                      <div className="flex h-full items-center justify-center p-6 text-sm text-muted">
-                        友人の予定同期は未実装です。
-                      </div>
-                    ) : isLoading ? (
+                    {isLoading ? (
                       <div className="flex h-full items-center justify-center p-6 text-sm text-muted">
                         読み込み中...
                       </div>
@@ -818,12 +906,12 @@ export default function CalendarPage() {
                       <div className="flex h-full items-center justify-center p-6 text-sm text-muted">
                         {loadError}
                       </div>
-                    ) : dayOccurrencesList.length === 0 ? (
+                    ) : dayOccurrences.length === 0 ? (
                       <div className="flex h-full items-center justify-center p-6 text-sm text-muted">
                         この日の予定は登録されていません。
                       </div>
                     ) : (
-                      dayOccurrencesList.map((item) => {
+                      dayOccurrences.map((item) => {
                         const offset = getMinutesFromStart(item.start) * (HOUR_HEIGHT / 60)
                         const height = Math.max(
                           (item.end.getTime() - item.start.getTime()) / (1000 * 60) * (HOUR_HEIGHT / 60),
