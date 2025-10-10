@@ -25,6 +25,13 @@ enum ReactionType {
   BAD
 }
 
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELLED
+}
+
 model User {
   id             String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
   email          String          @unique
@@ -36,12 +43,14 @@ model User {
   created_at     DateTime        @default(now())
   updated_at     DateTime        @updatedAt
 
-  events         Event[]
-  occurrences    Occurrence[]
-  timeline_posts TimelinePost[]
-  reactions      Reaction[]
-  friendships_as_a Friendship[] @relation("FriendshipUserA")
-  friendships_as_b Friendship[] @relation("FriendshipUserB")
+  events                  Event[]
+  occurrences             Occurrence[]
+  timeline_posts          TimelinePost[]
+  reactions               Reaction[]
+  friendships_as_a        Friendship[]          @relation("FriendshipUserA")
+  friendships_as_b        Friendship[]          @relation("FriendshipUserB")
+  sent_friend_requests    FriendRequest[]       @relation("FriendRequestRequester")
+  received_friend_requests FriendRequest[]       @relation("FriendRequestReceiver")
 
   @@index([name])
   @@map("users")
@@ -133,4 +142,21 @@ model Friendship {
   @@unique([user_a_id, user_b_id])
   @@index([user_b_id])
   @@map("friendships")
+}
+
+model FriendRequest {
+  id            String               @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  requester_id  String               @db.Uuid
+  receiver_id   String               @db.Uuid
+  status        FriendRequestStatus  @default(PENDING)
+  created_at    DateTime             @default(now())
+  responded_at  DateTime?
+
+  requester     User @relation("FriendRequestRequester", fields: [requester_id], references: [id], onDelete: Cascade)
+  receiver      User @relation("FriendRequestReceiver", fields: [receiver_id], references: [id], onDelete: Cascade)
+
+  @@unique([requester_id, receiver_id])
+  @@index([receiver_id, status])
+  @@index([requester_id, status])
+  @@map("friend_requests")
 }

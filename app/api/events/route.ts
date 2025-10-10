@@ -10,6 +10,7 @@ import {
   startOfDay,
 } from "@/lib/events/helpers"
 import { generateRecurringStartDates, RecurrenceError } from "@/lib/events/recurrence"
+import { areUsersFriends } from "@/lib/friendship"
 import { prisma } from "@/lib/prisma"
 import type { Occurrence as OccurrenceModel } from "@prisma/client"
 import { OccurrenceStatus, Visibility } from "@prisma/client"
@@ -26,11 +27,14 @@ export async function GET(request: Request) {
 
   const targetUserId = searchParams.get("userId") ?? viewerId
   if (targetUserId !== viewerId) {
-    return jsonErrorWithStatus(
-      "FORBIDDEN",
-      "You do not have access to this user's events.",
-      { status: 403 },
-    )
+    const allowed = await areUsersFriends(viewerId, targetUserId)
+    if (!allowed) {
+      return jsonErrorWithStatus(
+        "FORBIDDEN",
+        "You do not have access to this user's events.",
+        { status: 403 },
+      )
+    }
   }
 
   const withOccurrences = searchParams.get("withOccurrences") === "true"
