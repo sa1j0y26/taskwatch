@@ -172,78 +172,76 @@ Taskwatch API の詳細設計ドラフト。Next.js の Route Handler / Server A
 - **body**:
   - `title` (必須, 1〜120)
   - `description` (任意, max 1000)
+  - `tag` (任意, 32 文字以内)
   - `visibility` (`PRIVATE`/`PUBLIC`)
   - `durationMinutes` (必須, 5〜1440)
   - `rrule` (任意, RFC5545)
-  - `exdates` (任意, ISO配列)
-- **副作用**: `rrule` 指定時 はサーバー側で今後数週間分の occurrences を生成（レンジは後述）。
+  - `exdates` (任意, ISO 配列)
+  - `firstOccurrence` (任意, `{ startAt, endAt, notes? }`。`durationMinutes` と長さが一致する必要あり)
+- **現状メモ**: 2025-02 時点では `rrule` と `firstOccurrence` を組み合わせると初回を含む最大 12 件の occurrence を自動生成（対応頻度: DAILY / WEEKLY）。将来的にはより柔軟な期間設定を検討中。
+- **補足**: `rrule` と `firstOccurrence` を同時に渡すと、初回含め最大 12 件・約 90 日先までの occurrence を自動生成します。
 - **成功 (201)**: `{ "data": { "event": { ...Event } } }`
 
 #### GET /events
-- **用途**: イベント一覧取得。
+- **用途**: 認証ユーザー自身のイベント一覧取得。
 - **query**:
-  - `userId` (任意, フレンドのみアクセス可)
-  - `visibility`
   - `withOccurrences` (bool, 最新の occurrences を含めるか)
-- **備考**: カレンダー UI でタイムブロックを描画するため、`startAt` / `endAt` を中心とした occurrences を取得できるようにする。
-- **成功 (200)**: イベント配列 + オプションで occurrences。
+  - `rangeStart`, `rangeEnd` (ISO。`withOccurrences=true` 時に指定可能。未指定の場合は当日を起点に 7 日間を返却)
+- **現状メモ**: 2025-02 時点の実装では本人のイベントのみ取得可。フレンド共有は未実装。
+- **成功 (200)**: `events: Event[]` (`withOccurrences=true` の場合は `event.occurrences` に該当期間の Occurrence を埋め込み)。
 
 #### GET /events/:id
-- **制約**: 所有者 or 可視性が許す場合のみ。
-- **成功 (200)**: `{ "data": { "event": { ... }, "upcomingOccurrences": [ ... ] } }`
+- **制約**: 所有者のみアクセス可。
+- **query**:
+  - `withOccurrences`, `rangeStart`, `rangeEnd` は一覧と同様に利用可能。
+- **成功 (200)**: `{ "data": { "event": { ...Event, "tag"?, occurrences?: Occurrence[] } } }`
 
 #### PATCH /events/:id
-- **用途**: mutable フィールド更新。`rrule` 変更時は今後の occurrences を再生成し、過去は保持。
-- **成功 (200)**: 更新済み event。
+- **用途**: 既存イベントの部分更新。
+- **body**: `title` / `description` / `visibility` / `durationMinutes` / `rrule` / `exdates` (いずれも任意)。
+  - `description`, `rrule`, `exdates` は `null` を渡すと未設定扱いに更新。
+  - `exdates` は ISO 文字列配列のみ受理。
+- **現状メモ**: `rrule` 更新時の自動 occurrence 再生成は未実装。既存 occurrence の整合は別途検討。
+- **成功 (200)**: `{ "data": { "event": { ...Event, "tag"? } } }`
 
 #### DELETE /events/:id
-- **処理**: イベントと未来の occurrences をソフト削除。過去 occurrences は統計のため残す。
+- **処理**: イベントと紐づく occurrences を削除。
+- **現状メモ**: 2025-02 時点ではハードデリート。統計用途で保持する場合は今後の要件次第で変更。
 - **成功 (204)**: ボディなし。
 
 ### 3.4 Occurrences
 
 #### GET /occurrences
+- **用途**: 指定期間内の自分の occurrence 一覧取得。
 - **query**:
-  - `start`/`end` (必須): 最大 31 日間。
-  - `userId` (任意): フレンド取得用。
+  - `start`/`end` (必須): ISO 文字列。範囲は 31 日以内。
   - `status` (任意): `SCHEDULED`/`DONE`/`MISSED`。
-- **成功 (200)**:
-  ```json
-  {
-    "data": {
-      "occurrences": [
-        {
-          ...Occurrence,
-          "event": { "id": "018f5b78-944a-7a1f-b4a6-3f55b5c2f8d2", "title": "Morning Study" }
-        }
-      ]
-    }
-  }
-  ```
+- **現状メモ**: 2025-02 時点では本人の occurrences のみ取得可。フレンド表示は未実装。
+- **成功 (200)**: `{ "data": { "occurrences": [ { ...Occurrence, "event": { "id", "title", "tag"?, "visibility" } } ] } }`
 
 #### PATCH /occurrences/:id/status
 - **用途**: 完了/未達成の更新。
 - **body**:
-  - `status`: `DONE` | `MISSED`（`SCHEDULED` に戻す場合は `PUT /occurrences/:id/reset` など別エンドポイントにする案も検討）
-  - `completedAt` (任意, DONE の場合必須)
-  - `notes` (任意)
-- **処理**:
-  - 状態が `DONE` になった時、内部的に固定ポイント `+25` を加算。
-  - `MISSED` の場合 `-10`。結果はランキング計算で使用。
-  - streak 更新ロジックを適用し、現在のストリーク/レベル情報を返却。
-- **成功 (200)**:
-  ```json
-  {
-    "data": {
-      "occurrence": { ...Occurrence },
-      "meta": {
-        "streakCount": 11,
-        "weeklyPointDelta": 25
-      }
-    }
-  }
-  ```
-- **エラー**: `FORBIDDEN` (他人の occurrence), `INVALID_STATUS_TRANSITION` (422)。
+  - `status`: `DONE` | `MISSED`
+  - `completedAt`: `DONE` の場合は必須。ISO 文字列。
+  - `notes`: 任意。最大 1000 文字。
+- **現状メモ**: 2025-02 時点ではポイント加算やストリーク更新は未実装。純粋に occurrence レコードのみ更新。
+- **成功 (200)**: `{ "data": { "occurrence": { ...Occurrence, "event": { "id", "title", "visibility" } } } }`
+- **エラー例**: `OCCURRENCE_NOT_FOUND` (404), `VALIDATION_ERROR` (422)。
+
+#### PATCH /occurrences/:id
+- **用途**: 開始・終了時刻、メモの更新。
+- **body**:
+  - `startAt`, `endAt`: 任意。両方指定時は ISO 文字列で、`endAt` は `startAt` より後。
+  - `notes`: 任意。最大 1000 文字。空文字は `null` 扱い。
+- **備考**: duration が変化した場合はクライアント側で `durationMinutes` を `PATCH /events/:id` に渡して整合性を保つ。
+- **成功 (200)**: `{ "data": { "occurrence": { ...Occurrence, "event": { "id", "title", "tag"?, "visibility" } } } }`
+- **エラー例**: `OCCURRENCE_NOT_FOUND` (404), `VALIDATION_ERROR` (422)。
+
+#### DELETE /occurrences/:id
+- **用途**: 単発 occurrence の削除。
+- **成功 (204)**: ボディなし。
+- **エラー例**: `OCCURRENCE_NOT_FOUND` (404)。
 
 #### POST /occurrences/:id/reset (オプション)
 - **用途**: 誤操作で DONE/MISSED を取り消し、`SCHEDULED` に戻す。（実装するなら）

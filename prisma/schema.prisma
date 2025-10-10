@@ -51,6 +51,7 @@ model Event {
   id               String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
   user_id          String          @db.Uuid
   title            String
+  tag              String?
   description      String?
   visibility       Visibility      @default(PRIVATE)
   duration_minutes Int
