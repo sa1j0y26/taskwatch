@@ -1,17 +1,30 @@
+import type { NextRequest } from "next/server"
+
 import { auth } from "@/auth"
 import { jsonErrorWithStatus, jsonSuccess } from "@/lib/api-response"
-import {
-  isRecord,
-  parseDate,
-  serializeOccurrence,
-} from "@/lib/events/helpers"
+import { isRecord, parseDate, serializeOccurrence } from "@/lib/events/helpers"
 import { prisma } from "@/lib/prisma"
 import type { Prisma } from "@prisma/client"
 import { OccurrenceStatus } from "@prisma/client"
 
 const MAX_NOTES_LENGTH = 1000
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+type RouteParamsPromise = { params: Promise<{ id: string }> }
+type RouteParamsResolved = { params: { id: string } }
+
+type RouteContext = RouteParamsPromise | RouteParamsResolved
+
+async function resolveParams(context: RouteContext) {
+  const maybePromise = (context as RouteParamsPromise).params
+  if (typeof (maybePromise as Promise<{ id: string }>).then === "function") {
+    return await (maybePromise as Promise<{ id: string }>)
+  }
+  return (context as RouteParamsResolved).params
+}
+
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  const { id } = await resolveParams(context)
+
   const session = await auth()
 
   if (!session?.user?.id) {
@@ -19,7 +32,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 
   const viewerId = session.user.id
-  const occurrenceId = params.id
+  const occurrenceId = id
 
   let payload: unknown
   try {
@@ -92,7 +105,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   }
 
   const updateData: Prisma.OccurrenceUpdateInput = {
-    status: normalizedStatus!,
+    status: normalizedStatus as OccurrenceStatus,
     completed_at: normalizedStatus === OccurrenceStatus.DONE ? normalizedCompletedAt : null,
   }
 
@@ -111,6 +124,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
           select: {
             id: true,
             title: true,
+            tag: true,
             visibility: true,
           },
         },
@@ -131,6 +145,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
           select: {
             id: true,
             title: true,
+            tag: true,
             visibility: true,
           },
         },
@@ -144,6 +159,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
           ? {
               id: updated.event.id,
               title: updated.event.title,
+              tag: updated.event.tag,
               visibility: updated.event.visibility,
             }
           : null,

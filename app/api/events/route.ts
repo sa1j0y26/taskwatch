@@ -81,34 +81,39 @@ export async function GET(request: Request) {
   }
 
   try {
+    if (withOccurrences) {
+      const events = await prisma.event.findMany({
+        where: { user_id: targetUserId },
+        orderBy: { created_at: "desc" },
+        include: {
+          occurrences: {
+            where: {
+              ...(rangeStart || rangeEnd
+                ? {
+                    start_at: {
+                      ...(rangeStart ? { gte: rangeStart } : {}),
+                      ...(rangeEnd ? { lt: rangeEnd } : {}),
+                    },
+                  }
+                : {}),
+            },
+            orderBy: { start_at: "asc" },
+          },
+        },
+      })
+
+      return jsonSuccess({
+        events: events.map((event) => serializeEvent(event, event.occurrences ?? [])),
+      })
+    }
+
     const events = await prisma.event.findMany({
       where: { user_id: targetUserId },
       orderBy: { created_at: "desc" },
-      ...(withOccurrences
-        ? {
-            include: {
-              occurrences: {
-                where: {
-                  ...(rangeStart || rangeEnd
-                    ? {
-                        start_at: {
-                          ...(rangeStart ? { gte: rangeStart } : {}),
-                          ...(rangeEnd ? { lt: rangeEnd } : {}),
-                        },
-                      }
-                    : {}),
-                },
-                orderBy: { start_at: "asc" },
-              },
-            },
-          }
-        : {}),
     })
 
     return jsonSuccess({
-      events: events.map((event) =>
-        serializeEvent(event, withOccurrences ? event.occurrences ?? [] : undefined),
-      ),
+      events: events.map((event) => serializeEvent(event)),
     })
   } catch (error) {
     console.error("[events.GET]", error)

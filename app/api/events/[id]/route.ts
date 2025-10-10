@@ -11,14 +11,21 @@ import {
 import { prisma } from "@/lib/prisma"
 import type { Prisma } from "@prisma/client"
 import { Visibility } from "@prisma/client"
+import type { NextRequest } from "next/server"
 
-type RouteParams = {
-  params: {
-    id: string
+type RouteParamsPromise = { params: Promise<{ id: string }> }
+type RouteParamsResolved = { params: { id: string } }
+
+async function resolveParams(context: RouteParamsPromise | RouteParamsResolved) {
+  if (typeof (context as RouteParamsPromise).params?.then === "function") {
+    return await (context as RouteParamsPromise).params
   }
+  return (context as RouteParamsResolved).params
 }
 
-export async function GET(request: Request, { params }: RouteParams) {
+export async function GET(request: NextRequest, context: RouteParamsPromise | RouteParamsResolved) {
+  const { id } = await resolveParams(context)
+
   const session = await auth()
 
   if (!session?.user?.id) {
@@ -26,7 +33,7 @@ export async function GET(request: Request, { params }: RouteParams) {
   }
 
   const viewerId = session.user.id
-  const eventId = params.id
+  const eventId = id
 
   const { searchParams } = new URL(request.url)
   const withOccurrences = searchParams.get("withOccurrences") === "true"
@@ -42,30 +49,43 @@ export async function GET(request: Request, { params }: RouteParams) {
   }
 
   try {
+    if (withOccurrences) {
+      const event = await prisma.event.findFirst({
+        where: {
+          id: eventId,
+          user_id: viewerId,
+        },
+        include: {
+          occurrences: {
+            where: {
+              ...(range.rangeStart || range.rangeEnd
+                ? {
+                    start_at: {
+                      ...(range.rangeStart ? { gte: range.rangeStart } : {}),
+                      ...(range.rangeEnd ? { lt: range.rangeEnd } : {}),
+                    },
+                  }
+                : {}),
+            },
+            orderBy: { start_at: "asc" },
+          },
+        },
+      })
+
+      if (!event) {
+        return jsonErrorWithStatus("EVENT_NOT_FOUND", "Event not found.", { status: 404 })
+      }
+
+      return jsonSuccess({
+        event: serializeEvent(event, event.occurrences ?? []),
+      })
+    }
+
     const event = await prisma.event.findFirst({
       where: {
         id: eventId,
         user_id: viewerId,
       },
-      ...(withOccurrences
-        ? {
-            include: {
-              occurrences: {
-                where: {
-                  ...(range.rangeStart || range.rangeEnd
-                    ? {
-                        start_at: {
-                          ...(range.rangeStart ? { gte: range.rangeStart } : {}),
-                          ...(range.rangeEnd ? { lt: range.rangeEnd } : {}),
-                        },
-                      }
-                    : {}),
-                },
-                orderBy: { start_at: "asc" },
-              },
-            },
-          }
-        : {}),
     })
 
     if (!event) {
@@ -73,7 +93,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     }
 
     return jsonSuccess({
-      event: serializeEvent(event, withOccurrences ? event.occurrences ?? [] : undefined),
+      event: serializeEvent(event),
     })
   } catch (error) {
     console.error("[events/:id.GET]", error)
@@ -81,7 +101,9 @@ export async function GET(request: Request, { params }: RouteParams) {
   }
 }
 
-export async function PATCH(request: Request, { params }: RouteParams) {
+export async function PATCH(request: NextRequest, context: RouteParamsPromise | RouteParamsResolved) {
+  const { id } = await resolveParams(context)
+
   const session = await auth()
 
   if (!session?.user?.id) {
@@ -89,7 +111,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const viewerId = session.user.id
-  const eventId = params.id
+  const eventId = id
 
   let payload: unknown
   try {
@@ -243,7 +265,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(_request: Request, { params }: RouteParams) {
+export async function DELETE(_request: NextRequest, context: RouteParamsPromise | RouteParamsResolved) {
+  const { id } = await resolveParams(context)
+
   const session = await auth()
 
   if (!session?.user?.id) {
@@ -251,7 +275,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   }
 
   const viewerId = session.user.id
-  const eventId = params.id
+  const eventId = id
 
   try {
     const result = await prisma.event.deleteMany({

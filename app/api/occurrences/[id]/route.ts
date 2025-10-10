@@ -1,3 +1,5 @@
+import type { NextRequest } from "next/server"
+
 import { auth } from "@/auth"
 import { jsonErrorWithStatus, jsonSuccess } from "@/lib/api-response"
 import { isRecord, parseDate, serializeOccurrence } from "@/lib/events/helpers"
@@ -5,13 +7,22 @@ import { prisma } from "@/lib/prisma"
 
 const MAX_NOTES_LENGTH = 1000
 
-type RouteParams = {
-  params: {
-    id: string
+type RouteParamsPromise = { params: Promise<{ id: string }> }
+type RouteParamsResolved = { params: { id: string } }
+
+type RouteContext = RouteParamsPromise | RouteParamsResolved
+
+async function resolveParams(context: RouteContext) {
+  const maybePromise = (context as RouteParamsPromise).params
+  if (typeof (maybePromise as Promise<{ id: string }>).then === "function") {
+    return await (maybePromise as Promise<{ id: string }>)
   }
+  return (context as RouteParamsResolved).params
 }
 
-export async function PATCH(request: Request, { params }: RouteParams) {
+export async function PATCH(request: NextRequest, context: RouteContext) {
+  const { id } = await resolveParams(context)
+
   const session = await auth()
 
   if (!session?.user?.id) {
@@ -19,7 +30,7 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 
   const viewerId = session.user.id
-  const occurrenceId = params.id
+  const occurrenceId = id
 
   let payload: unknown
   try {
@@ -87,8 +98,11 @@ export async function PATCH(request: Request, { params }: RouteParams) {
       return jsonErrorWithStatus("OCCURRENCE_NOT_FOUND", "Occurrence not found.", { status: 404 })
     }
 
-    const nextStart = startAt ? parseDate(startAt) : current.start_at
-    const nextEnd = endAt ? parseDate(endAt) : current.end_at
+    const startAtString = typeof startAt === "string" ? startAt : null
+    const endAtString = typeof endAt === "string" ? endAt : null
+
+    const nextStart = startAtString ? parseDate(startAtString) : current.start_at
+    const nextEnd = endAtString ? parseDate(endAtString) : current.end_at
 
     if (!nextStart || !nextEnd) {
       return jsonErrorWithStatus("INVALID_RANGE", "startAt/endAt must be valid ISO dates.", {
@@ -103,10 +117,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
     }
 
     const updates: Record<string, unknown> = {}
-    if (startAt) {
+    if (startAtString) {
       updates.start_at = nextStart
     }
-    if (endAt) {
+    if (endAtString) {
       updates.end_at = nextEnd
     }
     if (notes !== undefined) {
@@ -153,7 +167,9 @@ export async function PATCH(request: Request, { params }: RouteParams) {
   }
 }
 
-export async function DELETE(_request: Request, { params }: RouteParams) {
+export async function DELETE(_request: NextRequest, context: RouteContext) {
+  const { id } = await resolveParams(context)
+
   const session = await auth()
 
   if (!session?.user?.id) {
@@ -161,7 +177,7 @@ export async function DELETE(_request: Request, { params }: RouteParams) {
   }
 
   const viewerId = session.user.id
-  const occurrenceId = params.id
+  const occurrenceId = id
 
   try {
     const result = await prisma.occurrence.deleteMany({
