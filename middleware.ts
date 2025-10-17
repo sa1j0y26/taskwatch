@@ -1,49 +1,41 @@
 import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server"
 
-type SessionCookie = {
-  name: string
-  value: string
+import { auth } from "@/auth"
+
+export const runtime = "nodejs"
+
+const PUBLIC_PATHS = new Set([
+  "/",
+  "/api/auth/signin",
+  "/api/auth/callback/google",
+])
+
+function isPublic(pathname: string) {
+  if (pathname.startsWith("/_next")) return true
+  if (pathname.startsWith("/api/auth")) return true
+  if (PUBLIC_PATHS.has(pathname)) return true
+  if (/\.(?:svg|png|jpg|jpeg|gif|webp)$/i.test(pathname)) return true
+  return false
 }
 
-function findSessionCookie(request: NextRequest): SessionCookie | null {
-  const possibleNames = ["next-auth.session-token", "__Secure-next-auth.session-token"]
-  for (const name of possibleNames) {
-    const value = request.cookies.get(name)?.value
-    if (value) {
-      return { name, value }
-    }
-  }
-  return null
-}
+export default auth((req) => {
+  const { pathname, search, hash } = req.nextUrl
 
-function isProtectedPath(pathname: string) {
-  if (pathname.startsWith("/api/auth") || pathname.startsWith("/_next")) {
-    return false
-  }
-  if (/\.(?:svg|png|jpg|jpeg|gif|webp)$/i.test(pathname)) {
-    return false
-  }
-  return pathname !== "/"
-}
-
-export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-
-  if (!isProtectedPath(pathname)) {
+  if (isPublic(pathname)) {
     return NextResponse.next()
   }
 
-  const sessionCookie = findSessionCookie(request)
-  if (!sessionCookie) {
-    const loginUrl = new URL("/api/auth/signin", request.url)
-    loginUrl.searchParams.set("callbackUrl", request.nextUrl.pathname)
-    return NextResponse.redirect(loginUrl)
+  if (!req.auth) {
+    const signInUrl = new URL("/api/auth/signin", req.nextUrl)
+    signInUrl.searchParams.set("callbackUrl", `${pathname}${search}${hash}`)
+    return NextResponse.redirect(signInUrl)
   }
 
   return NextResponse.next()
-}
+})
 
 export const config = {
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 }
