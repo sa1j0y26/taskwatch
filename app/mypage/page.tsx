@@ -4,16 +4,6 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { DashboardShell } from "../_components/dashboard-shell"
 
-const WEEKLY_PROGRESS = [
-  { day: "Mon", planned: 180, completed: 150 },
-  { day: "Tue", planned: 200, completed: 180 },
-  { day: "Wed", planned: 160, completed: 160 },
-  { day: "Thu", planned: 210, completed: 120 },
-  { day: "Fri", planned: 120, completed: 90 },
-  { day: "Sat", planned: 240, completed: 210 },
-  { day: "Sun", planned: 150, completed: 130 },
-]
-
 type PendingOccurrence = {
   id: string
   eventId: string
@@ -44,7 +34,47 @@ type PendingResponse = {
 
 type PendingAction = "DONE" | "MISSED"
 
+type MyPageStatsResponse = {
+  period: {
+    start: string
+    end: string
+  }
+  weeklyTotals: Array<{
+    date: string
+    plannedMinutes: number
+    completedMinutes: number
+    doneCount: number
+    missedCount: number
+  }>
+  summary: {
+    level: number
+    totalXp: number
+    xpForCurrentLevel: number
+    xpForNextLevel: number
+    xpToNextLevel: number
+    levelProgress: number
+    streakCount: number
+    completionRate: number | null
+    weeklyDone: number
+    weeklyMissed: number
+    completedMinutesWeek: number
+    completedMinutesPreviousWeek: number
+    xpPerMinute: number
+    xpPenaltyMissed: number
+  }
+  navigation: {
+    prevWeekStart: string
+    nextWeekStart: string | null
+    isCurrentWeek: boolean
+  }
+}
+
 export default function MyPage() {
+  const [weekStart, setWeekStart] = useState(getCurrentWeekStartIso())
+  const [stats, setStats] = useState<MyPageStatsResponse | null>(null)
+  const [isStatsLoading, setIsStatsLoading] = useState(true)
+  const [statsError, setStatsError] = useState<string | null>(null)
+
   const [pendingOccurrences, setPendingOccurrences] = useState<PendingOccurrence[]>([])
   const [pendingTotal, setPendingTotal] = useState(0)
   const [pendingCutoff, setPendingCutoff] = useState<string | null>(null)
@@ -125,6 +155,46 @@ export default function MyPage() {
     void loadPending()
   }, [loadPending])
 
+  const loadStats = useCallback(
+    async (targetWeek: string) => {
+      setIsStatsLoading(true)
+      setStatsError(null)
+      try {
+        const params = new URLSearchParams()
+        if (targetWeek) {
+          params.set("weekStart", targetWeek)
+        }
+
+        const response = await fetch(
+          `/api/stats/mypage${params.size > 0 ? `?${params.toString()}` : ""}`,
+          {
+            method: "GET",
+            credentials: "include",
+          },
+        )
+
+        const body = (await safeParseJSON(response)) as { data?: MyPageStatsResponse; error?: { message?: string } } | null
+
+        if (!response.ok || !body?.data) {
+          throw new Error(body?.error?.message ?? "マイページ統計の取得に失敗しました。")
+        }
+
+        setStats(body.data)
+      } catch (error) {
+        console.error("[mypage.stats]", error)
+        setStats(null)
+        setStatsError(error instanceof Error ? error.message : "マイページ統計の取得に失敗しました。")
+      } finally {
+        setIsStatsLoading(false)
+      }
+    },
+    [],
+  )
+
+  useEffect(() => {
+    void loadStats(weekStart)
+  }, [weekStart, loadStats])
+
   const handleEvaluate = useCallback(
     async (occurrence: PendingOccurrence, action: PendingAction) => {
       setUpdatingId(occurrence.id)
@@ -178,54 +248,147 @@ export default function MyPage() {
 
   const hasPending = pendingOccurrences.length > 0
 
+  const weeklyTotals = useMemo(() => stats?.weeklyTotals ?? [], [stats?.weeklyTotals])
+  const maxMinutes = useMemo(() => {
+    if (weeklyTotals.length === 0) {
+      return 60
+    }
+    const max = weeklyTotals.reduce((acc, item) => {
+      return Math.max(acc, item.completedMinutes)
+    }, 0)
+    return Math.max(60, max)
+  }, [weeklyTotals])
+
+  const levelCardValue = stats ? `Lv.${stats.summary.level}` : "--"
+  const levelCardHelper = stats
+    ? `XP ${stats.summary.totalXp} / ${stats.summary.xpForNextLevel} (あと ${stats.summary.xpToNextLevel})`
+    : "XP 情報なし"
+
+  const streakCardValue = stats ? `${stats.summary.streakCount} 日` : "--"
+  const streakCardHelper = stats ? `直近の連続達成日数` : "ストリーク情報なし"
+
+  const completionRateValue = stats?.summary.completionRate
+  const completionCardValue =
+    completionRateValue != null ? `${Math.round(completionRateValue * 100)}%` : stats ? "--" : "--"
+  const completionCardHelper = stats
+    ? `今週: 完了 ${stats.summary.weeklyDone} 件 / 未達成 ${stats.summary.weeklyMissed} 件`
+    : "完遂率情報なし"
+
+  const weekLabel = stats ? formatWeekRange(stats.period.start, stats.period.end) : "―"
+  const canGoNext = Boolean(stats?.navigation.nextWeekStart)
+
+  const weeklyCompletedMinutes = stats?.summary.completedMinutesWeek ?? 0
+  const previousWeekCompletedMinutes = stats?.summary.completedMinutesPreviousWeek ?? 0
+  const deltaMinutes = weeklyCompletedMinutes - previousWeekCompletedMinutes
+  const hasValidComparison = Number.isFinite(deltaMinutes)
+  const weeklyCompletedDisplay = stats ? formatMinutes(weeklyCompletedMinutes) : "--"
+  const comparisonLabel = stats
+    ? !hasValidComparison
+      ? "比較不可"
+      : deltaMinutes === 0
+        ? "先週と同じ"
+        : `${deltaMinutes > 0 ? "+" : "-"}${formatDurationHoursMinutes(Math.abs(deltaMinutes))}`
+    : "―"
+
   return (
     <DashboardShell
       title="マイページ"
       description="今週の学習状況やレベル進捗を振り返り、次の行動を決めましょう。"
     >
       <section className="grid gap-6 md:grid-cols-3">
-        <StatCard title="現在のレベル" value="5" helper="累積 XP 1,250" accent />
-        <StatCard title="ストリーク" value="18 日" helper="先週から +3" />
-        <StatCard title="週間完遂率" value="82%" helper="目標: 90%" />
+        <StatCard title="現在のレベル" value={levelCardValue} helper={levelCardHelper} accent loading={isStatsLoading} />
+        <StatCard title="ストリーク" value={streakCardValue} helper={streakCardHelper} loading={isStatsLoading} />
+        <StatCard title="週間完遂率" value={completionCardValue} helper={completionCardHelper} loading={isStatsLoading} />
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[3fr_2fr]">
         <div className="rounded-2xl border border-strap/50 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-forest">週間タスク時間</h2>
-            <span className="text-xs text-muted">単位: 分</span>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-forest">週間タスク時間</h2>
+              <p className="text-xs text-muted">単位: 分</p>
+            </div>
+            <div className="flex flex-col items-end text-xs text-muted">
+              <span className="text-sm font-semibold text-forest">
+                {isStatsLoading ? "--" : `${weeklyCompletedDisplay} / 週`}
+              </span>
+              <span>
+                {isStatsLoading
+                  ? "比較計算中"
+                  : `先週比 ${comparisonLabel}`}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-xs text-muted">
+              <button
+                type="button"
+                onClick={() => setWeekStart(stats?.navigation.prevWeekStart ?? weekStart)}
+                disabled={isStatsLoading}
+                className="rounded-full border border-strap/40 px-3 py-1 hover:bg-accent-soft disabled:opacity-60"
+              >
+                前の週
+              </button>
+              <span>{weekLabel}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  if (stats?.navigation.nextWeekStart) {
+                    setWeekStart(stats.navigation.nextWeekStart)
+                  }
+                }}
+                disabled={isStatsLoading || !canGoNext}
+                className="rounded-full border border-strap/40 px-3 py-1 hover:bg-accent-soft disabled:opacity-60"
+              >
+                次の週
+              </button>
+            </div>
           </div>
-          <div className="mt-6 grid grid-cols-7 gap-4">
-            {WEEKLY_PROGRESS.map((item) => {
-              const plannedHeight = Math.max(item.planned / 3, 8)
-              const completedHeight = Math.max(item.completed / 3, 6)
-              return (
-                <div key={item.day} className="flex flex-col items-center gap-2">
-                  <div className="flex h-40 w-6 flex-col justify-end gap-1">
-                    <span
-                      className="inline-block rounded-full bg-strap/70"
-                      style={{ height: `${plannedHeight}px` }}
-                    />
-                    <span
-                      className="inline-block rounded-full bg-forest/80"
-                      style={{ height: `${completedHeight}px` }}
-                    />
+
+          {statsError ? (
+            <div className="mt-4 rounded-xl border border-accent bg-accent-soft p-4 text-xs text-accent">
+              {statsError}
+            </div>
+          ) : null}
+
+          <div className="mt-6 min-h-[220px]">
+            {isStatsLoading ? (
+              <div className="grid grid-cols-7 gap-4">
+                {Array.from({ length: 7 }).map((_, index) => (
+                  <div key={index} className="flex flex-col items-center gap-2">
+                    <div className="flex h-40 w-6 flex-col justify-end gap-1">
+                      <span className="inline-block h-20 w-full rounded-full bg-strap/20" />
+                      <span className="inline-block h-16 w-full rounded-full bg-strap/10" />
+                    </div>
+                    <span className="h-3 w-12 rounded bg-strap/10" />
                   </div>
-                  <p className="text-xs text-muted">{item.day}</p>
-                </div>
-              )
-            })}
+                ))}
+              </div>
+            ) : weeklyTotals.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-strap/40 bg-surface p-6 text-xs text-muted">
+                データがありません。タスクを追加して進捗を記録しましょう。
+              </div>
+            ) : (
+              <div className="grid grid-cols-7 gap-4">
+                {weeklyTotals.map((item) => {
+                  const completedHeight = Math.max((item.completedMinutes / maxMinutes) * 160, 4)
+                  return (
+                    <div key={item.date} className="flex flex-col items-center gap-2">
+                      <div className="flex h-40 w-6 flex-col justify-end gap-1">
+                        <span
+                          className="inline-block rounded-full bg-forest/80"
+                          style={{ height: `${completedHeight}px` }}
+                        />
+                      </div>
+                      <p className="text-xs text-muted">{formatDayLabel(item.date)}</p>
+                      <p className="text-[11px] text-muted">{formatShortDate(item.date)}</p>
+                      <p className="text-[11px] text-forest/80">{formatMinutes(item.completedMinutes)}</p>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
-          <div className="mt-8 flex flex-wrap gap-4 text-xs text-muted">
-            <p className="flex items-center gap-2">
-              <span className="inline-block h-3 w-3 rounded-full bg-strap/70" />
-              計画時間
-            </p>
-            <p className="flex items-center gap-2">
-              <span className="inline-block h-3 w-3 rounded-full bg-forest/80" />
-              実績時間
-            </p>
-          </div>
+
+          <div className="mt-8 text-xs text-muted">グラフは各日の完了時間を表示しています。</div>
         </div>
 
         <PendingEvaluationsPanel
@@ -257,9 +420,10 @@ type StatCardProps = {
   value: string
   helper?: string
   accent?: boolean
+  loading?: boolean
 }
 
-function StatCard({ title, value, helper, accent = false }: StatCardProps) {
+function StatCard({ title, value, helper, accent = false, loading = false }: StatCardProps) {
   return (
     <div
       className={`rounded-2xl border p-6 shadow-sm transition ${
@@ -272,11 +436,11 @@ function StatCard({ title, value, helper, accent = false }: StatCardProps) {
         {title}
       </p>
       <p className={`mt-3 text-3xl font-semibold ${accent ? "text-forest" : "text-forest"}`}>
-        {value}
+        {loading ? "--" : value}
       </p>
       {helper ? (
         <p className={`mt-2 text-xs ${accent ? "text-forest/80" : "text-muted"}`}>
-          {helper}
+          {loading ? "データ取得中..." : helper}
         </p>
       ) : null}
     </div>
@@ -444,6 +608,16 @@ function formatDateRange(startISO: string, endISO: string) {
   return `${formatDateTime(start)} 〜 ${formatTime(end)}`
 }
 
+function formatWeekRange(startISO: string, endISO: string) {
+  const start = new Date(`${startISO}T00:00:00Z`)
+  const end = new Date(`${endISO}T00:00:00Z`)
+  const formatter = new Intl.DateTimeFormat("ja", {
+    month: "2-digit",
+    day: "2-digit",
+  })
+  return `${formatter.format(start)} 〜 ${formatter.format(end)}`
+}
+
 function formatDateTime(date: Date) {
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, "0")
@@ -457,6 +631,41 @@ function formatTime(date: Date) {
   const hours = String(date.getHours()).padStart(2, "0")
   const minutes = String(date.getMinutes()).padStart(2, "0")
   return `${hours}:${minutes}`
+}
+
+function formatDayLabel(dateISO: string) {
+  const date = new Date(`${dateISO}T00:00:00Z`)
+  return new Intl.DateTimeFormat("ja", { weekday: "short" }).format(date)
+}
+
+function formatShortDate(dateISO: string) {
+  const date = new Date(`${dateISO}T00:00:00Z`)
+  return new Intl.DateTimeFormat("ja", { month: "2-digit", day: "2-digit" }).format(date)
+}
+
+function formatMinutes(minutes: number) {
+  if (!Number.isFinite(minutes) || minutes <= 0) {
+    return "0 分"
+  }
+  return `${minutes} 分`
+}
+
+function formatDurationHoursMinutes(minutes: number) {
+  if (!Number.isFinite(minutes) || minutes <= 0) {
+    return "0時間0分"
+  }
+  const hours = Math.floor(minutes / 60)
+  const rest = minutes % 60
+  return `${hours}時間${rest}分`
+}
+
+function getCurrentWeekStartIso() {
+  const now = new Date()
+  now.setUTCHours(0, 0, 0, 0)
+  const day = now.getUTCDay()
+  const diff = day === 0 ? -6 : 1 - day
+  now.setUTCDate(now.getUTCDate() + diff)
+  return now.toISOString().slice(0, 10)
 }
 
 async function safeParseJSON(response: Response) {

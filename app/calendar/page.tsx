@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 
 import { DashboardShell } from "../_components/dashboard-shell"
+import { getAvatarInitial, getAvatarTextColor, normalizeHexColor } from "@/lib/avatar"
 
 type OccurrenceStatus = "SCHEDULED" | "DONE" | "MISSED"
 
@@ -56,6 +57,7 @@ type FormState = {
 type FriendOption = {
   id: string
   name: string
+  avatarColor?: string | null
 }
 
 const START_HOUR = 6
@@ -84,7 +86,7 @@ export default function CalendarPage() {
   const todayKey = useMemo(() => formatDateKey(today), [today])
 
   const [friendOptions, setFriendOptions] = useState<FriendOption[]>([
-    { id: "me", name: "自分" },
+    { id: "me", name: "自分", avatarColor: "#14532D" },
   ])
   const [friendSearch, setFriendSearch] = useState("")
   const [friendsError, setFriendsError] = useState<string | null>(null)
@@ -145,15 +147,16 @@ export default function CalendarPage() {
         }
 
         const friends: FriendOption[] = (body?.data?.friendships ?? []).map(
-          (friendship: { friendUser: { id: string; name: string } }) => ({
+          (friendship: { friendUser: { id: string; name: string; avatarColor?: string | null } }) => ({
             id: friendship.friendUser.id,
             name: friendship.friendUser.name,
+            avatarColor: friendship.friendUser.avatarColor ?? null,
           }),
         )
 
         if (!cancelled) {
           const merged = [
-            { id: "me", name: "自分" },
+            { id: "me", name: "自分", avatarColor: "#14532D" },
             ...friends.filter((option) => option.id !== "me"),
           ]
           setFriendOptions(merged)
@@ -830,7 +833,10 @@ export default function CalendarPage() {
                         : "border-strap/40 bg-white text-forest/80 hover:bg-accent-soft"
                     }`}
                   >
-                    {friend.name}
+                    <span className="flex items-center gap-2">
+                      <AvatarCircle name={friend.name} color={friend.avatarColor ?? null} className="h-7 w-7 text-xs" />
+                      <span>{friend.name}</span>
+                    </span>
                   </button>
                 ))
               )}
@@ -1348,4 +1354,25 @@ async function safeParseJSON(response: Response) {
   } catch {
     return null
   }
+}
+
+function AvatarCircle({
+  name,
+  color,
+  className = "h-7 w-7 text-xs",
+}: {
+  name: string
+  color: string | null
+  className?: string
+}) {
+  const background = normalizeHexColor(color, "#DCFCE7")
+  const foreground = getAvatarTextColor(color, "#DCFCE7")
+  return (
+    <span
+      className={`flex items-center justify-center rounded-full font-semibold ${className}`}
+      style={{ backgroundColor: background, color: foreground }}
+    >
+      {getAvatarInitial(name)}
+    </span>
+  )
 }

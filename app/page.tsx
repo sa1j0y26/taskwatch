@@ -5,19 +5,24 @@ import SignOut from "./auth/.components/signout"
 
 const FEATURE_CARDS = [
   {
-    title: "時間をブロック",
-    body: "習慣タスクをカレンダーに割り当て、日々の集中時間を確保できます。",
+    title: "カレンダーで予定を固定",
+    body: "繰り返しタスクや単発イベントを時間ブロックとして管理。未評価タスクもひと目で分かります。",
     href: "/calendar",
   },
   {
-    title: "モチベーション維持",
-    body: "週間ランキングで友人と競い合い、完遂率を可視化します。",
+    title: "リアルタイムな報告",
+    body: "タスク完了・未達の自動投稿や手動メモがタイムラインに即時配信され、友人と励まし合えます。",
+    href: "/timeline",
+  },
+  {
+    title: "週間ランキング",
+    body: "完了時間・達成率・ストリークを比較してモチベーションを維持。ダッシュボードのカードとも連動。",
     href: "/ranking",
   },
   {
-    title: "ふりかえりを共有",
-    body: "タイムラインで完了報告や気づきを投稿し、リアクションをもらいましょう。",
-    href: "/timeline",
+    title: "プロフィール管理",
+    body: "表示名やアイコンをアカウント設定から即変更。リアクションやランキングに反映されます。",
+    href: "/settings",
   },
 ]
 
@@ -34,11 +39,17 @@ export default function Home() {
               Taskwatch で計画・実行・共有をシームレスに
             </h1>
             <p className="text-sm text-forest/80 md:text-base">
-              学習や自己研鑽のタスクをカレンダーで管理し、完遂状況を友人と見える化。
-              モチベーションを保つためのランキングやタイムラインも備えています。
+              学習や自己研鑽のタスクを時間ブロックで管理し、完了・未達の結果をタイムラインで自動共有。
+              友人とランキングで競い合いながら、毎日の積み重ねを可視化します。
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <SignIn />
+              <Link
+                href="/mypage"
+                className="rounded-full border border-strap/40 px-4 py-2 text-sm font-semibold text-forest/80 transition hover:bg-accent-soft"
+              >
+                ダッシュボードを見る
+              </Link>
             </div>
           </div>
           <div className="flex flex-col items-end gap-3 text-right text-xs text-muted">
@@ -47,7 +58,7 @@ export default function Home() {
           </div>
         </header>
 
-        <main className="grid gap-8 md:grid-cols-3">
+        <main className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
           {FEATURE_CARDS.map((feature) => (
             <Link
               key={feature.title}

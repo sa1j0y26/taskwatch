@@ -2,6 +2,7 @@ import { auth } from "@/auth"
 import { jsonErrorWithStatus, jsonSuccess } from "@/lib/api-response"
 import { getFriendIdsForUser } from "@/lib/friendship"
 import { prisma } from "@/lib/prisma"
+import { publicUserSelect, serializePublicUser } from "@/lib/user"
 
 const METRICS = ["totalMinutes", "completionRate", "streak"] as const
 const PERIODS = ["weekly", "monthly"] as const
@@ -105,10 +106,15 @@ export async function GET(request: Request) {
 
     const userRecords = await prisma.user.findMany({
       where: { id: { in: friendIds } },
-      select: { id: true, name: true, avatar: true },
+      select: publicUserSelect,
     })
 
-    const userMap = new Map(userRecords.map((user) => [user.id, user]))
+    const userMap = new Map(
+      userRecords.map((user) => {
+        const serialized = serializePublicUser(user)
+        return [user.id, serialized]
+      }),
+    )
 
     const rankings = friendIds
       .map<RankingEntry | null>((userId) => {
@@ -167,7 +173,7 @@ export async function GET(request: Request) {
 
     const rankingsWithUser = rankings.map((entry, index) => ({
       rank: index + 1,
-      user: userMap.get(entry.userId),
+      user: userMap.get(entry.userId) ?? null,
       value: entry.value,
       displayValue: entry.displayValue,
       extra: entry.extra,

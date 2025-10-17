@@ -3,12 +3,14 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react"
 
 import { DashboardShell } from "../_components/dashboard-shell"
+import { getAvatarInitial, getAvatarTextColor, normalizeHexColor } from "@/lib/avatar"
 
 type FriendUser = {
   id: string
   name: string
   email: string
   avatar: string | null
+  avatarColor: string | null
 }
 
 type Friendship = {
@@ -408,9 +410,12 @@ export default function FriendsPage() {
                       key={user.id}
                       className="flex items-center justify-between gap-3 rounded-xl border border-strap/40 bg-surface px-4 py-3"
                     >
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium text-forest">{user.name}</span>
-                        <span className="text-xs text-muted">{user.email}</span>
+                      <div className="flex items-center gap-3">
+                        <AvatarCircle name={user.name} color={user.avatarColor} />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-medium text-forest">{user.name}</span>
+                          <span className="text-xs text-muted">{user.email}</span>
+                        </div>
                       </div>
                       <button
                         type="button"
@@ -466,14 +471,17 @@ export default function FriendsPage() {
                       key={request.id}
                       className="flex items-center justify-between gap-3 rounded-xl border border-strap/40 bg-surface px-4 py-3"
                     >
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-forest">
-                          {request.requester.name}
-                        </span>
-                        <span className="text-xs text-muted">{request.requester.email}</span>
-                        <span className="text-[10px] text-muted">
-                          申請日: {formatDate(new Date(request.createdAt))}
-                        </span>
+                      <div className="flex items-center gap-3">
+                        <AvatarCircle name={request.requester.name} color={request.requester.avatarColor} />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold text-forest">
+                            {request.requester.name}
+                          </span>
+                          <span className="text-xs text-muted">{request.requester.email}</span>
+                          <span className="text-[10px] text-muted">
+                            申請日: {formatDate(new Date(request.createdAt))}
+                          </span>
+                        </div>
                       </div>
                       <div className="flex gap-2">
                         <button
@@ -522,14 +530,17 @@ export default function FriendsPage() {
                       key={request.id}
                       className="flex items-center justify-between gap-3 rounded-xl border border-strap/40 bg-surface px-4 py-3"
                     >
-                      <div className="flex flex-col">
-                        <span className="text-sm font-semibold text-forest">
-                          {request.receiver.name}
-                        </span>
-                        <span className="text-xs text-muted">{request.receiver.email}</span>
-                        <span className="text-[10px] text-muted">
-                          申請日: {formatDate(new Date(request.createdAt))}
-                        </span>
+                      <div className="flex items-center gap-3">
+                        <AvatarCircle name={request.receiver.name} color={request.receiver.avatarColor} />
+                        <div className="flex flex-col">
+                          <span className="text-sm font-semibold text-forest">
+                            {request.receiver.name}
+                          </span>
+                          <span className="text-xs text-muted">{request.receiver.email}</span>
+                          <span className="text-[10px] text-muted">
+                            申請日: {formatDate(new Date(request.createdAt))}
+                          </span>
+                        </div>
                       </div>
                       <button
                         type="button"
@@ -577,14 +588,17 @@ export default function FriendsPage() {
                     key={friendship.id}
                     className="flex items-center justify-between gap-3 rounded-xl border border-strap/40 bg-surface px-4 py-3"
                   >
-                    <div className="flex flex-col">
-                      <span className="text-sm font-semibold text-forest">
-                        {friendship.friendUser.name}
-                      </span>
-                      <span className="text-xs text-muted">{friendship.friendUser.email}</span>
-                      <span className="text-[10px] text-muted">
-                        追加日: {formatDate(new Date(friendship.createdAt))}
-                      </span>
+                    <div className="flex items-center gap-3">
+                      <AvatarCircle name={friendship.friendUser.name} color={friendship.friendUser.avatarColor} />
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold text-forest">
+                          {friendship.friendUser.name}
+                        </span>
+                        <span className="text-xs text-muted">{friendship.friendUser.email}</span>
+                        <span className="text-[10px] text-muted">
+                          追加日: {formatDate(new Date(friendship.createdAt))}
+                        </span>
+                      </div>
                     </div>
                     <button
                       type="button"
@@ -618,4 +632,25 @@ function formatDate(date: Date) {
     .getDate()
     .toString()
     .padStart(2, "0")}`
+}
+
+function AvatarCircle({
+  name,
+  color,
+  className = "h-9 w-9 text-sm",
+}: {
+  name: string
+  color: string | null
+  className?: string
+}) {
+  const background = normalizeHexColor(color, "#DCFCE7")
+  const foreground = getAvatarTextColor(color, "#DCFCE7")
+  return (
+    <span
+      className={`flex items-center justify-center rounded-full font-semibold ${className}`}
+      style={{ backgroundColor: background, color: foreground }}
+    >
+      {getAvatarInitial(name)}
+    </span>
+  )
 }

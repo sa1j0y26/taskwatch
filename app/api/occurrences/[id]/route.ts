@@ -4,24 +4,12 @@ import { auth } from "@/auth"
 import { jsonErrorWithStatus, jsonSuccess } from "@/lib/api-response"
 import { isRecord, parseDate, serializeOccurrence } from "@/lib/events/helpers"
 import { prisma } from "@/lib/prisma"
+import { OccurrenceStatus } from "@prisma/client"
 
 const MAX_NOTES_LENGTH = 1000
 
-type RouteParamsPromise = { params: Promise<{ id: string }> }
-type RouteParamsResolved = { params: { id: string } }
-
-type RouteContext = RouteParamsPromise | RouteParamsResolved
-
-async function resolveParams(context: RouteContext) {
-  const maybePromise = (context as RouteParamsPromise).params
-  if (typeof (maybePromise as Promise<{ id: string }>).then === "function") {
-    return await (maybePromise as Promise<{ id: string }>)
-  }
-  return (context as RouteParamsResolved).params
-}
-
-export async function PATCH(request: NextRequest, context: RouteContext) {
-  const { id } = await resolveParams(context)
+export async function PATCH(request: NextRequest, context: unknown) {
+  const { id } = (context as { params: { id: string } }).params
 
   const session = await auth()
 
@@ -167,8 +155,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 }
 
-export async function DELETE(_request: NextRequest, context: RouteContext) {
-  const { id } = await resolveParams(context)
+export async function DELETE(_request: NextRequest, context: unknown) {
+  const { id } = (context as { params: { id: string } }).params
 
   const session = await auth()
 
@@ -180,16 +168,37 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
   const occurrenceId = id
 
   try {
-    const result = await prisma.occurrence.deleteMany({
+    const occurrence = await prisma.occurrence.findFirst({
       where: {
         id: occurrenceId,
         user_id: viewerId,
       },
+      select: {
+        id: true,
+        end_at: true,
+        status: true,
+      },
     })
 
-    if (result.count === 0) {
+    if (!occurrence) {
       return jsonErrorWithStatus("OCCURRENCE_NOT_FOUND", "Occurrence not found.", { status: 404 })
     }
+
+    const now = new Date()
+    if (
+      occurrence.status !== OccurrenceStatus.SCHEDULED ||
+      occurrence.end_at.getTime() <= now.getTime()
+    ) {
+      return jsonErrorWithStatus(
+        "DELETE_NOT_ALLOWED",
+        "Occurrences cannot be deleted after the scheduled time has passed.",
+        { status: 409 },
+      )
+    }
+
+    await prisma.occurrence.delete({
+      where: { id: occurrenceId },
+    })
 
     return new Response(null, { status: 204 })
   } catch (error) {
