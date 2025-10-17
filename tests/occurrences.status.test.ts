@@ -116,7 +116,7 @@ describe("Occurrence status updates", () => {
     }
 
     mockedPrisma.$transaction.mockImplementationOnce(async (callback) => {
-      const typedCallback = callback as (tx: {
+      const typed = callback as (tx: {
         occurrence: { update: ReturnType<typeof vi.fn> }
         timelinePost: {
           findFirst: ReturnType<typeof vi.fn>
@@ -136,8 +136,7 @@ describe("Occurrence status updates", () => {
         },
       }
 
-      const result = await typedCallback(tx)
-      return result
+      return typed(tx)
     })
 
     const response = await patchOccurrenceStatus(
@@ -145,7 +144,7 @@ describe("Occurrence status updates", () => {
         method: "PATCH",
         body: JSON.stringify({ status: "DONE", completedAt: "2024-04-01T10:05:00Z" }),
       }),
-      { params: Promise.resolve({ id: "occ-1" }) },
+      { params: { id: "occ-1" } },
     )
 
     expect(response.status).toBe(200)
@@ -178,7 +177,7 @@ describe("Occurrence status updates", () => {
         method: "PATCH",
         body: JSON.stringify({ status: "DONE", completedAt: "2024-04-01T10:05:00Z" }),
       }),
-      { params: Promise.resolve({ id: "occ-4" }) },
+      { params: { id: "occ-4" } },
     )
 
     expect(response.status).toBe(409)
@@ -200,7 +199,7 @@ describe("Occurrence status updates", () => {
     })
 
     const response = await deleteOccurrence(new Request("http://localhost/api/occurrences/occ-2", { method: "DELETE" }), {
-      params: Promise.resolve({ id: "occ-2" }),
+      params: { id: "occ-2" },
     })
 
     expect(response.status).toBe(409)
@@ -225,7 +224,7 @@ describe("Occurrence status updates", () => {
     mockedPrisma.occurrence.delete.mockResolvedValueOnce({ id: "occ-3" })
 
     const response = await deleteOccurrence(new Request("http://localhost/api/occurrences/occ-3", { method: "DELETE" }), {
-      params: Promise.resolve({ id: "occ-3" }),
+      params: { id: "occ-3" },
     })
 
     expect(response.status).toBe(204)

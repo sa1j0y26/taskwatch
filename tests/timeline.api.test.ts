@@ -47,9 +47,9 @@ vi.mock("@/lib/friendship", () => ({
 }))
 
 describe("Timeline API", () => {
-  const mockedAuth = auth as unknown as ReturnType<typeof vi.fn>
-  const mockedFriends = getFriendIdsForUser as unknown as ReturnType<typeof vi.fn>
-  const mockedPrisma = prisma as unknown as {
+const mockedAuth = auth as unknown as ReturnType<typeof vi.fn>
+const mockedFriends = getFriendIdsForUser as unknown as ReturnType<typeof vi.fn>
+const mockedPrisma = prisma as unknown as {
     timelinePost: {
       findMany: ReturnType<typeof vi.fn>
       create: ReturnType<typeof vi.fn>
@@ -65,8 +65,9 @@ describe("Timeline API", () => {
       groupBy: ReturnType<typeof vi.fn>
     }
     $transaction: ReturnType<typeof vi.fn>
-  }
-  const mockedAreFriends = areUsersFriends as unknown as ReturnType<typeof vi.fn>
+}
+const mockedAreFriends = areUsersFriends as unknown as ReturnType<typeof vi.fn>
+const publishRealtimeMock = publishRealtime as unknown as ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -194,7 +195,7 @@ describe("Timeline API", () => {
       }),
     )
     expect(body.data.post.author).toEqual(expect.objectContaining({ color: "#14532D" }))
-    expect(publishRealtime).toHaveBeenCalledWith(
+    expect(publishRealtimeMock).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "timeline.posted",
         payload: expect.any(Object),
@@ -210,7 +211,7 @@ describe("Timeline API", () => {
 
     mockedPrisma.$transaction
       .mockImplementationOnce(async (callback) => {
-        const typedCallback = callback as (tx: {
+        const typed = callback as (tx: {
           reaction: {
             findUnique: ReturnType<typeof vi.fn>
             create: ReturnType<typeof vi.fn>
@@ -228,15 +229,13 @@ describe("Timeline API", () => {
           },
         }
 
-                return typedCallback(tx)
+        return typed(tx)
       })
       .mockImplementationOnce(async (callback) => {
-        const typedCallback = callback as (tx: {
+        const typed = callback as (tx: {
           reaction: {
+            groupBy: ReturnType<typeof vi.fn>
             findUnique: ReturnType<typeof vi.fn>
-            create: ReturnType<typeof vi.fn>
-            update: ReturnType<typeof vi.fn>
-            delete: ReturnType<typeof vi.fn>
           }
         }) => Promise<unknown>
 
@@ -247,7 +246,7 @@ describe("Timeline API", () => {
           },
         }
 
-        return typedCallback(tx)
+        return typed(tx)
       })
 
     const response = await reactToTimeline(
@@ -255,14 +254,14 @@ describe("Timeline API", () => {
         method: "POST",
         body: JSON.stringify({ type: "LIKE" }),
       }),
-      { params: Promise.resolve({ id: "post-3" }) },
+      { params: { id: "post-3" } },
     )
 
     expect(response.status).toBe(200)
     const body = await response.json()
     expect(body.data.reactions).toEqual({ likes: 1, bads: 0, viewerReaction: "LIKE" })
     expect(mockedPrisma.$transaction).toHaveBeenCalledTimes(2)
-    expect(publishRealtime).toHaveBeenCalledWith(
+    expect(publishRealtimeMock).toHaveBeenCalledWith(
       expect.objectContaining({
         type: "timeline.reacted",
         payload: expect.objectContaining({ postId: "post-3" }),
