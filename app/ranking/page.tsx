@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 
 import { DashboardShell } from "../_components/dashboard-shell"
+import { getAvatarInitial, getAvatarTextColor, normalizeHexColor } from "@/lib/avatar"
 
 const METRICS = [
   { id: "totalMinutes", label: "合計学習時間", suffix: "分" },
@@ -24,7 +25,8 @@ type RankingEntry = {
     id: string
     name: string
     avatar: string | null
-  }
+    avatarColor?: string | null
+  } | null
   value: number | null
   displayValue: string
   extra?: Record<string, unknown>
@@ -194,25 +196,7 @@ export default function RankingPage() {
           </div>
         ) : null}
 
-        <div className="grid gap-6 xl:grid-cols-3">
-          {METRICS.map((metric) => {
-            const state = metricsState[metric.id] ?? {
-              entries: [],
-              isLoading: false,
-              error: null,
-            }
-
-            return (
-              <RankingTableCard
-                key={metric.id}
-                title={metric.label}
-                entries={state.entries}
-                isLoading={state.isLoading}
-                error={state.error}
-              />
-            )
-          })}
-        </div>
+        <ScrollableMetricRow metricsState={metricsState} />
       </section>
     </DashboardShell>
   )
@@ -269,9 +253,7 @@ function RankingTableCard({ title, entries, isLoading, error }: RankingTableCard
                 </td>
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-3">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-forest/10 text-xs font-semibold text-forest">
-                      {item.user?.name?.[0] ?? "-"}
-                    </span>
+                    <AvatarCircle name={item.user?.name ?? "?"} color={item.user?.avatarColor ?? null} />
                     <span className="text-sm font-medium text-forest">
                       {item.user?.name ?? "Unknown"}
                     </span>
@@ -304,4 +286,114 @@ async function safeParseJSON(response: Response) {
   } catch {
     return null
   }
+}
+
+function AvatarCircle({ name, color, className = "h-8 w-8 text-xs" }: { name: string; color: string | null; className?: string }) {
+  const background = normalizeHexColor(color, "#DCFCE7")
+  const foreground = getAvatarTextColor(color, "#DCFCE7")
+  return (
+    <span
+      className={`flex items-center justify-center rounded-full font-semibold ${className}`}
+      style={{ backgroundColor: background, color: foreground }}
+    >
+      {getAvatarInitial(name)}
+    </span>
+  )
+}
+
+type ScrollableMetricRowProps = {
+  metricsState: Record<Metric, MetricState>
+}
+
+function ScrollableMetricRow({ metricsState }: ScrollableMetricRowProps) {
+  const [activeIndex, setActiveIndex] = useState(0)
+
+  const metricsSnapshot = useMemo(
+    () =>
+      METRICS.map((metric) => {
+        const state = metricsState[metric.id]
+        return `${metric.id}:${state?.entries.length ?? 0}:${state?.isLoading ? 1 : 0}`
+      }).join("|"),
+    [metricsState],
+  )
+
+  useEffect(() => {
+    setActiveIndex(0)
+  }, [metricsSnapshot])
+
+  const goPrev = () => {
+    setActiveIndex((prev) => (prev === 0 ? METRICS.length - 1 : prev - 1))
+  }
+
+  const goNext = () => {
+    setActiveIndex((prev) => (prev + 1) % METRICS.length)
+  }
+
+  const activeMetric = METRICS[activeIndex]
+  const activeState = metricsState[activeMetric.id] ?? {
+    entries: [],
+    isLoading: false,
+    error: null,
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-4">
+        <button
+          type="button"
+          onClick={goPrev}
+          className="hidden h-9 w-9 items-center justify-center rounded-full border border-strap/40 bg-white text-sm font-semibold text-forest shadow-sm hover:bg-accent-soft md:flex"
+        >
+          ←
+        </button>
+        <div className="w-full">
+          <RankingTableCard
+            key={activeMetric.id}
+            title={activeMetric.label}
+            entries={activeState.entries}
+            isLoading={activeState.isLoading}
+            error={activeState.error}
+          />
+        </div>
+        <button
+          type="button"
+          onClick={goNext}
+          className="hidden h-9 w-9 items-center justify-center rounded-full border border-strap/40 bg-white text-sm font-semibold text-forest shadow-sm hover:bg-accent-soft md:flex"
+        >
+          →
+        </button>
+      </div>
+
+      <div className="flex items-center justify-center gap-2">
+        {METRICS.map((metric, index) => (
+          <button
+            key={metric.id}
+            type="button"
+            onClick={() => setActiveIndex(index)}
+            className={`h-2.5 w-2.5 rounded-full ${
+              index === activeIndex ? "bg-accent" : "bg-strap/40 hover:bg-strap/60"
+            }`}
+            aria-label={`${metric.label} を表示`}
+          />
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between gap-4 md:hidden">
+        <button
+          type="button"
+          onClick={goPrev}
+          className="flex flex-1 items-center justify-center rounded-full border border-strap/40 bg-white py-2 text-xs font-semibold text-forest shadow-sm"
+        >
+          ← 前のランキング
+        </button>
+        <button
+          type="button"
+          onClick={goNext}
+          className="flex flex-1 items-center justify-center rounded-full border border-strap/40 bg-white py-2 text-xs font-semibold text-forest shadow-sm"
+        >
+          次のランキング →
+        </button>
+      </div>
+    </div>
+  )
 }

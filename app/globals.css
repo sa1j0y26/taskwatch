@@ -11,6 +11,8 @@
   --surface: #ffffff;
   --accent: #0f7a4b;
   --accent-soft: #c9efd8;
+  --font-geist-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-geist-mono: "Menlo", "SFMono-Regular", "Consolas", monospace;
 }
 
 @media (prefers-color-scheme: dark) {

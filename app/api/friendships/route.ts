@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server"
 import { auth } from "@/auth"
 import { jsonErrorWithStatus, jsonSuccess } from "@/lib/api-response"
 import { prisma } from "@/lib/prisma"
+import { publicUserSelect, serializePublicUser } from "@/lib/user"
 const REQUEST_STATUSES = {
   pending: "PENDING",
   accepted: "ACCEPTED",
@@ -28,10 +29,10 @@ export async function GET(request: NextRequest) {
       },
       include: {
         user_a: {
-          select: { id: true, name: true, avatar: true, email: true },
+          select: publicUserSelect,
         },
         user_b: {
-          select: { id: true, name: true, avatar: true, email: true },
+          select: publicUserSelect,
         },
       },
       orderBy: { created_at: "desc" },
@@ -39,11 +40,11 @@ export async function GET(request: NextRequest) {
 
     return jsonSuccess({
       friendships: friendships.map((friendship) => {
-        const friendUser =
+        const rawFriend =
           friendship.user_a_id === viewerId ? friendship.user_b : friendship.user_a
         return {
           id: friendship.id,
-          friendUser,
+          friendUser: serializePublicUser(rawFriend)!,
           createdAt: friendship.created_at.toISOString(),
         }
       }),
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
   try {
     const friend = await prisma.user.findUnique({
       where: { id: friendUserId },
-      select: { id: true, name: true, avatar: true, email: true },
+      select: publicUserSelect,
     })
 
     if (!friend) {
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
         {
           friendship: {
             id: friendship.id,
-            friendUser: friend,
+            friendUser: serializePublicUser(friend)!,
             createdAt: friendship.created_at.toISOString(),
           },
           request: {
@@ -176,7 +177,7 @@ export async function POST(request: NextRequest) {
       },
       include: {
         receiver: {
-          select: { id: true, name: true, avatar: true, email: true },
+          select: publicUserSelect,
         },
       },
     })
@@ -187,7 +188,7 @@ export async function POST(request: NextRequest) {
           id: requestRecord.id,
           status: requestRecord.status,
           createdAt: requestRecord.created_at.toISOString(),
-          receiver: requestRecord.receiver,
+          receiver: serializePublicUser(requestRecord.receiver)!,
         },
       },
       { status: 201 },

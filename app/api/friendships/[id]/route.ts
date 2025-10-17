@@ -4,21 +4,8 @@ import { auth } from "@/auth"
 import { jsonErrorWithStatus } from "@/lib/api-response"
 import { prisma } from "@/lib/prisma"
 
-type RouteParamsPromise = { params: Promise<{ id: string }> }
-type RouteParamsResolved = { params: { id: string } }
-
-type RouteContext = RouteParamsPromise | RouteParamsResolved
-
-async function resolveParams(context: RouteContext) {
-  const maybePromise = (context as RouteParamsPromise).params
-  if (typeof (maybePromise as Promise<{ id: string }>).then === "function") {
-    return await (maybePromise as Promise<{ id: string }>)
-  }
-  return (context as RouteParamsResolved).params
-}
-
-export async function DELETE(_request: NextRequest, context: RouteContext) {
-  const { id } = await resolveParams(context)
+export async function DELETE(_request: NextRequest, context: unknown) {
+  const { id } = (context as { params: { id: string } }).params
 
   const session = await auth()
 

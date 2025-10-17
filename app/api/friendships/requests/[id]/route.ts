@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server"
 import { auth } from "@/auth"
 import { jsonErrorWithStatus, jsonSuccess } from "@/lib/api-response"
 import { prisma } from "@/lib/prisma"
+import { publicUserSelect, serializePublicUser } from "@/lib/user"
 const REQUEST_STATUSES = {
   pending: "PENDING",
   accepted: "ACCEPTED",
@@ -10,21 +11,8 @@ const REQUEST_STATUSES = {
   cancelled: "CANCELLED",
 } as const
 
-type RouteParamsPromise = { params: Promise<{ id: string }> }
-type RouteParamsResolved = { params: { id: string } }
-
-type RouteContext = RouteParamsPromise | RouteParamsResolved
-
-async function resolveParams(context: RouteContext) {
-  const maybePromise = (context as RouteParamsPromise).params
-  if (typeof (maybePromise as Promise<{ id: string }>).then === "function") {
-    return await (maybePromise as Promise<{ id: string }>)
-  }
-  return (context as RouteParamsResolved).params
-}
-
-export async function PATCH(request: NextRequest, context: RouteContext) {
-  const { id } = await resolveParams(context)
+export async function PATCH(request: NextRequest, context: unknown) {
+  const { id } = (context as { params: { id: string } }).params
 
   const session = await auth()
 
@@ -59,10 +47,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       where: { id },
       include: {
         requester: {
-          select: { id: true, name: true, avatar: true, email: true },
+          select: publicUserSelect,
         },
         receiver: {
-          select: { id: true, name: true, avatar: true, email: true },
+          select: publicUserSelect,
         },
       },
     })
@@ -115,15 +103,16 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           status: updatedRequest.status,
           createdAt: updatedRequest.created_at.toISOString(),
           respondedAt: updatedRequest.responded_at?.toISOString() ?? null,
-          requester: requestRecord.requester,
-          receiver: requestRecord.receiver,
+          requester: serializePublicUser(requestRecord.requester)!,
+          receiver: serializePublicUser(requestRecord.receiver)!,
         },
         friendship: {
           id: friendship.id,
-          friendUser:
+          friendUser: serializePublicUser(
             requestRecord.requester_id === viewerId
               ? requestRecord.receiver
               : requestRecord.requester,
+          )!,
           createdAt: friendship.created_at.toISOString(),
         },
       })
@@ -139,10 +128,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       },
       include: {
         requester: {
-          select: { id: true, name: true, avatar: true, email: true },
+          select: publicUserSelect,
         },
         receiver: {
-          select: { id: true, name: true, avatar: true, email: true },
+          select: publicUserSelect,
         },
       },
     })
@@ -153,8 +142,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         status: updatedRequest.status,
         createdAt: updatedRequest.created_at.toISOString(),
         respondedAt: updatedRequest.responded_at?.toISOString() ?? null,
-        requester: updatedRequest.requester,
-        receiver: updatedRequest.receiver,
+        requester: serializePublicUser(updatedRequest.requester)!,
+        receiver: serializePublicUser(updatedRequest.receiver)!,
       },
     })
   } catch (error) {

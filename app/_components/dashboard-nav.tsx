@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { href: "/friends", label: "フレンド", hint: "友人を探す・管理" },
   { href: "/ranking", label: "ランキング", hint: "友人と競い合う" },
   { href: "/timeline", label: "タイムライン", hint: "報告を共有" },
+  { href: "/settings", label: "アカウント", hint: "プロフィール編集" },
 ]
 
 export function DashboardNav({ onNavigate }: DashboardNavProps) {

@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server"
 import { auth } from "@/auth"
 import { jsonErrorWithStatus, jsonSuccess } from "@/lib/api-response"
 import { prisma } from "@/lib/prisma"
+import { publicUserSelect, serializePublicUser } from "@/lib/user"
 const REQUEST_STATUSES = {
   pending: "PENDING",
   accepted: "ACCEPTED",
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
       },
       include: {
         requester: {
-          select: { id: true, name: true, avatar: true, email: true },
+          select: publicUserSelect,
         },
       },
       orderBy: { created_at: "desc" },
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
       },
       include: {
         receiver: {
-          select: { id: true, name: true, avatar: true, email: true },
+          select: publicUserSelect,
         },
       },
       orderBy: { created_at: "desc" },
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
       status: requestRecord.status,
       createdAt: requestRecord.created_at.toISOString(),
       respondedAt: requestRecord.responded_at?.toISOString() ?? null,
-      requester: requestRecord.requester,
+      requester: serializePublicUser(requestRecord.requester)!,
     }))
 
     const sent = sentRecords.map((requestRecord) => ({
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
       status: requestRecord.status,
       createdAt: requestRecord.created_at.toISOString(),
       respondedAt: requestRecord.responded_at?.toISOString() ?? null,
-      receiver: requestRecord.receiver,
+      receiver: serializePublicUser(requestRecord.receiver)!,
     }))
 
     if (direction === "received") {

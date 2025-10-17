@@ -32,11 +32,18 @@ enum FriendRequestStatus {
   CANCELLED
 }
 
+enum TimelinePostKind {
+  AUTO_DONE
+  AUTO_MISSED
+  MANUAL_NOTE
+}
+
 model User {
   id             String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
   email          String          @unique
   name           String
   avatar         String?
+  avatar_color   String?
   xp             Int             @default(0)
   level          Int             @default(1)
   streak_count   Int             @default(0)
@@ -98,18 +105,22 @@ model Occurrence {
 }
 
 model TimelinePost {
-  id             String       @id @default(dbgenerated("uuidv7()")) @db.Uuid
-  user_id        String       @db.Uuid
-  occurrence_id  String?      @db.Uuid
+  id             String          @id @default(dbgenerated("uuidv7()")) @db.Uuid
+  user_id        String          @db.Uuid
+  occurrence_id  String?         @db.Uuid
   message        String
-  visibility     Visibility   @default(PRIVATE)
-  created_at     DateTime     @default(now())
-  updated_at     DateTime     @updatedAt
+  kind           TimelinePostKind @default(AUTO_DONE)
+  memo           String?
+  memo_updated_at DateTime?
+  visibility     Visibility      @default(PRIVATE)
+  created_at     DateTime        @default(now())
+  updated_at     DateTime        @updatedAt
 
-  user           User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  occurrence     Occurrence?  @relation(fields: [occurrence_id], references: [id], onDelete: SetNull)
+  user           User            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  occurrence     Occurrence?     @relation(fields: [occurrence_id], references: [id], onDelete: SetNull)
   reactions      Reaction[]
 
+  @@unique([occurrence_id])
   @@index([user_id, visibility])
   @@map("timeline_posts")
 }

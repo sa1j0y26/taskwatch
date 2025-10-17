@@ -4,26 +4,20 @@ import { auth } from "@/auth"
 import { jsonErrorWithStatus, jsonSuccess } from "@/lib/api-response"
 import { isRecord, parseDate, serializeOccurrence } from "@/lib/events/helpers"
 import { prisma } from "@/lib/prisma"
+import {
+  TIMELINE_POST_KIND,
+  createAutoTimelineMessage,
+  serializeTimelinePost,
+  timelinePostInclude,
+} from "@/lib/timeline"
+import { publishRealtime } from "@/lib/realtime"
 import type { Prisma } from "@prisma/client"
 import { OccurrenceStatus } from "@prisma/client"
 
 const MAX_NOTES_LENGTH = 1000
 
-type RouteParamsPromise = { params: Promise<{ id: string }> }
-type RouteParamsResolved = { params: { id: string } }
-
-type RouteContext = RouteParamsPromise | RouteParamsResolved
-
-async function resolveParams(context: RouteContext) {
-  const maybePromise = (context as RouteParamsPromise).params
-  if (typeof (maybePromise as Promise<{ id: string }>).then === "function") {
-    return await (maybePromise as Promise<{ id: string }>)
-  }
-  return (context as RouteParamsResolved).params
-}
-
-export async function PATCH(request: NextRequest, context: RouteContext) {
-  const { id } = await resolveParams(context)
+export async function PATCH(request: NextRequest, context: unknown) {
+  const { id } = (context as { params: { id: string } }).params
 
   const session = await auth()
 
@@ -104,9 +98,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     })
   }
 
+  const nextStatus = normalizedStatus as OccurrenceStatus
+
   const updateData: Prisma.OccurrenceUpdateInput = {
-    status: normalizedStatus as OccurrenceStatus,
-    completed_at: normalizedStatus === OccurrenceStatus.DONE ? normalizedCompletedAt : null,
+    status: nextStatus,
+    completed_at: nextStatus === OccurrenceStatus.DONE ? normalizedCompletedAt : null,
   }
 
   if (notes !== undefined) {
@@ -135,32 +131,122 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return jsonErrorWithStatus("OCCURRENCE_NOT_FOUND", "Occurrence not found.", { status: 404 })
     }
 
-    const updated = await prisma.occurrence.update({
-      where: {
-        id: occurrenceId,
-      },
-      data: updateData,
-      include: {
-        event: {
-          select: {
-            id: true,
-            title: true,
-            tag: true,
-            visibility: true,
+    if (existing.status === normalizedStatus) {
+      return jsonErrorWithStatus(
+        "STATUS_UNCHANGED",
+        "Occurrence status is already set to the requested value.",
+        { status: 409 },
+      )
+    }
+
+    const {
+      occurrence: updatedOccurrence,
+      timelinePost,
+      createdNewTimeline,
+    } = await prisma.$transaction(async (tx) => {
+      const updatedOccurrence = await tx.occurrence.update({
+        where: {
+          id: occurrenceId,
+        },
+        data: updateData,
+        include: {
+          event: {
+            select: {
+              id: true,
+              title: true,
+              tag: true,
+              visibility: true,
+            },
           },
         },
+      })
+
+      const existingTimeline = await tx.timelinePost.findFirst({
+        where: {
+          occurrence_id: occurrenceId,
+        },
+        select: {
+          id: true,
+          memo: true,
+        },
+      })
+
+      let timelineRecord: Prisma.TimelinePostGetPayload<{
+        include: typeof timelinePostInclude
+      }> | null = null
+
+      const createdNewTimeline = !existingTimeline
+
+      if (createdNewTimeline) {
+        const kind =
+          nextStatus === OccurrenceStatus.DONE
+            ? TIMELINE_POST_KIND.AUTO_DONE
+            : TIMELINE_POST_KIND.AUTO_MISSED
+
+        const message = createAutoTimelineMessage(kind, updatedOccurrence.event?.title ?? null)
+
+        const created = await tx.timelinePost.create({
+          data: {
+            user_id: viewerId,
+            occurrence_id: occurrenceId,
+            message,
+            kind,
+            visibility: "PRIVATE",
+          },
+          include: timelinePostInclude,
+        })
+        timelineRecord = created
+      } else {
+        const kind =
+          nextStatus === OccurrenceStatus.DONE
+            ? TIMELINE_POST_KIND.AUTO_DONE
+            : TIMELINE_POST_KIND.AUTO_MISSED
+
+        const message = createAutoTimelineMessage(kind, updatedOccurrence.event?.title ?? null)
+
+        const updatedTimeline = await tx.timelinePost.update({
+          where: { id: existingTimeline.id },
+          data: {
+            message,
+            kind,
+          },
+          include: timelinePostInclude,
+        })
+        timelineRecord = updatedTimeline
+      }
+
+      const timelinePost = timelineRecord
+
+      return { occurrence: updatedOccurrence, timelinePost, createdNewTimeline }
+    })
+
+    if (timelinePost) {
+      publishRealtime({
+        type: createdNewTimeline ? "timeline.posted" : "timeline.updated",
+        payload: {
+          post: serializeTimelinePost(timelinePost),
+        },
+      })
+    }
+
+    publishRealtime({
+      type: "occurrence.status_changed",
+      payload: {
+        occurrenceId,
+        status: nextStatus,
+        timelineKind: timelinePost ? timelinePost.kind : null,
       },
     })
 
     return jsonSuccess({
       occurrence: {
-        ...serializeOccurrence(updated),
-        event: updated.event
+        ...serializeOccurrence(updatedOccurrence),
+        event: updatedOccurrence.event
           ? {
-              id: updated.event.id,
-              title: updated.event.title,
-              tag: updated.event.tag,
-              visibility: updated.event.visibility,
+              id: updatedOccurrence.event.id,
+              title: updatedOccurrence.event.title,
+              tag: updatedOccurrence.event.tag,
+              visibility: updatedOccurrence.event.visibility,
             }
           : null,
       },

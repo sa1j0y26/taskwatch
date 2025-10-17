@@ -13,18 +13,10 @@ import type { Prisma } from "@prisma/client"
 import { Visibility } from "@prisma/client"
 import type { NextRequest } from "next/server"
 
-type RouteParamsPromise = { params: Promise<{ id: string }> }
-type RouteParamsResolved = { params: { id: string } }
+export const runtime = "nodejs"
 
-async function resolveParams(context: RouteParamsPromise | RouteParamsResolved) {
-  if (typeof (context as RouteParamsPromise).params?.then === "function") {
-    return await (context as RouteParamsPromise).params
-  }
-  return (context as RouteParamsResolved).params
-}
-
-export async function GET(request: NextRequest, context: RouteParamsPromise | RouteParamsResolved) {
-  const { id } = await resolveParams(context)
+export async function GET(request: NextRequest, context: unknown) {
+  const { id } = (context as { params: { id: string } }).params
 
   const session = await auth()
 
@@ -101,8 +93,8 @@ export async function GET(request: NextRequest, context: RouteParamsPromise | Ro
   }
 }
 
-export async function PATCH(request: NextRequest, context: RouteParamsPromise | RouteParamsResolved) {
-  const { id } = await resolveParams(context)
+export async function PATCH(request: NextRequest, context: unknown) {
+  const { id } = (context as { params: { id: string } }).params
 
   const session = await auth()
 
@@ -265,8 +257,8 @@ export async function PATCH(request: NextRequest, context: RouteParamsPromise | 
   }
 }
 
-export async function DELETE(_request: NextRequest, context: RouteParamsPromise | RouteParamsResolved) {
-  const { id } = await resolveParams(context)
+export async function DELETE(_request: NextRequest, context: unknown) {
+  const { id } = (context as { params: { id: string } }).params
 
   const session = await auth()
 
