@@ -49,7 +49,7 @@ export default function Home() {
           {FEATURE_CARDS.map((feature) => (
             <article
               key={feature.title}
-              className="rounded-2xl border border-strap/40 bg-white p-6 shadow-sm"
+              className="rounded-2xl border border-strap/40 bg-surface p-6 shadow-sm"
             >
               <h2 className="text-lg font-semibold text-forest">{feature.title}</h2>
               <p className="mt-3 text-sm text-muted">{feature.body}</p>

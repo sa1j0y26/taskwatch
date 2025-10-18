@@ -115,7 +115,7 @@ export default function SettingsPage() {
 
   return (
     <DashboardShell title="アカウント設定" description="表示名やアイコンを編集できます。">
-      <section className="rounded-2xl border border-strap/40 bg-white p-6 shadow-sm">
+      <section className="rounded-2xl border border-strap/40 bg-surface p-6 shadow-sm">
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <label className="block text-sm font-medium text-forest" htmlFor="name">

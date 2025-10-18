@@ -170,7 +170,7 @@ export default function RankingPage() {
               className={`rounded-full border px-4 py-2 text-xs font-medium transition ${
                 period === item.id
                   ? "border-accent/40 bg-accent text-white"
-                  : "border-strap/40 bg-white text-forest/80 hover:bg-accent-soft"
+                  : "border-strap/40 bg-surface text-forest/80 hover:bg-accent-soft"
               }`}
             >
               {item.label}
@@ -211,7 +211,7 @@ type RankingTableCardProps = {
 
 function RankingTableCard({ title, entries, isLoading, error }: RankingTableCardProps) {
   return (
-    <article className="rounded-2xl border border-strap/40 bg-white p-6 shadow-sm">
+    <article className="rounded-2xl border border-strap/40 bg-surface p-6 shadow-sm">
       <header className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-forest">{title}</h3>
         <span className="text-[10px] text-muted">フレンドのみ</span>
@@ -342,7 +342,7 @@ function ScrollableMetricRow({ metricsState }: ScrollableMetricRowProps) {
         <button
           type="button"
           onClick={goPrev}
-          className="hidden h-9 w-9 items-center justify-center rounded-full border border-strap/40 bg-white text-sm font-semibold text-forest shadow-sm hover:bg-accent-soft md:flex"
+          className="hidden h-9 w-9 items-center justify-center rounded-full border border-strap/40 bg-surface text-sm font-semibold text-forest shadow-sm hover:bg-accent-soft md:flex"
         >
           ←
         </button>
@@ -358,7 +358,7 @@ function ScrollableMetricRow({ metricsState }: ScrollableMetricRowProps) {
         <button
           type="button"
           onClick={goNext}
-          className="hidden h-9 w-9 items-center justify-center rounded-full border border-strap/40 bg-white text-sm font-semibold text-forest shadow-sm hover:bg-accent-soft md:flex"
+          className="hidden h-9 w-9 items-center justify-center rounded-full border border-strap/40 bg-surface text-sm font-semibold text-forest shadow-sm hover:bg-accent-soft md:flex"
         >
           →
         </button>
@@ -382,14 +382,14 @@ function ScrollableMetricRow({ metricsState }: ScrollableMetricRowProps) {
         <button
           type="button"
           onClick={goPrev}
-          className="flex flex-1 items-center justify-center rounded-full border border-strap/40 bg-white py-2 text-xs font-semibold text-forest shadow-sm"
+          className="flex flex-1 items-center justify-center rounded-full border border-strap/40 bg-surface py-2 text-xs font-semibold text-forest shadow-sm"
         >
           ← 前のランキング
         </button>
         <button
           type="button"
           onClick={goNext}
-          className="flex flex-1 items-center justify-center rounded-full border border-strap/40 bg-white py-2 text-xs font-semibold text-forest shadow-sm"
+          className="flex flex-1 items-center justify-center rounded-full border border-strap/40 bg-surface py-2 text-xs font-semibold text-forest shadow-sm"
         >
           次のランキング →
         </button>

@@ -358,7 +358,7 @@ export default function FriendsPage() {
       description="友人の検索・申請・管理ができます。"
     >
       <div className="grid gap-8 xl:grid-cols-[2fr_3fr]">
-        <section className="space-y-5 rounded-2xl border border-strap/40 bg-white p-6 shadow-sm">
+        <section className="space-y-5 rounded-2xl border border-strap/40 bg-surface p-6 shadow-sm">
           <header className="space-y-2">
             <h2 className="text-lg font-semibold text-forest">友だちを検索</h2>
             <p className="text-xs text-muted">名前またはメールアドレスで検索して申請を送りましょう。</p>
@@ -440,7 +440,7 @@ export default function FriendsPage() {
         </section>
 
         <div className="space-y-8">
-          <section className="space-y-4 rounded-2xl border border-strap/40 bg-white p-6 shadow-sm">
+          <section className="space-y-4 rounded-2xl border border-strap/40 bg-surface p-6 shadow-sm">
             <header className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-forest">届いている申請</h2>
@@ -507,7 +507,7 @@ export default function FriendsPage() {
             )}
           </section>
 
-          <section className="space-y-4 rounded-2xl border border-strap/40 bg-white p-6 shadow-sm">
+          <section className="space-y-4 rounded-2xl border border-strap/40 bg-surface p-6 shadow-sm">
             <header className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-forest">送信した申請</h2>
@@ -556,7 +556,7 @@ export default function FriendsPage() {
             )}
           </section>
 
-          <section className="space-y-4 rounded-2xl border border-strap/40 bg-white p-6 shadow-sm">
+          <section className="space-y-4 rounded-2xl border border-strap/40 bg-surface p-6 shadow-sm">
             <header className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-semibold text-forest">フレンド一覧</h2>

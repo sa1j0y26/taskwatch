@@ -503,7 +503,7 @@ export default function TimelinePage() {
       description="友人たちの完了・未達成報告を確認して、リアクションを送り合いましょう。"
     >
       <section className="space-y-4">
-        <div className="rounded-2xl border border-strap/40 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-strap/40 bg-surface p-6 shadow-sm">
           <h2 className="text-sm font-semibold text-forest">みんなの状況をシェアする</h2>
           <p className="mt-2 text-xs text-muted">
             最近の気づきや振り返りを簡単に残しましょう。投稿はフレンド全員に共有されます。
@@ -541,13 +541,13 @@ export default function TimelinePage() {
         ) : null}
 
         {isLoading && posts.length === 0 ? (
-          <div className="rounded-xl border border-strap/40 bg-white p-8 text-center text-sm text-muted">
+          <div className="rounded-xl border border-strap/40 bg-surface p-8 text-center text-sm text-muted">
             読み込み中...
           </div>
         ) : null}
 
         {!isLoading && posts.length === 0 ? (
-          <div className="rounded-xl border border-strap/40 bg-white p-8 text-center text-sm text-muted">
+          <div className="rounded-xl border border-strap/40 bg-surface p-8 text-center text-sm text-muted">
             まだ投稿がありません。完了したタスクや気づきをシェアしてみましょう。
           </div>
         ) : null}
@@ -560,7 +560,7 @@ export default function TimelinePage() {
           const isEditingMemo = memoEditingId === post.id
 
           return (
-            <article key={post.id} className="rounded-2xl border border-strap/40 bg-white p-5 shadow-sm">
+            <article key={post.id} className="rounded-2xl border border-strap/40 bg-surface p-5 shadow-sm">
               <header className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <span
@@ -627,7 +627,7 @@ export default function TimelinePage() {
                 ) : null}
 
                 {post.memo ? (
-                  <div className="rounded-xl border border-strap/30 bg-emerald-50/50 px-4 py-3 text-xs text-forest">
+                  <div className="rounded-xl border border-strap/30 bg-accent-soft px-4 py-3 text-xs text-forest">
                     <p className="whitespace-pre-wrap text-sm leading-relaxed text-forest/90">{post.memo}</p>
                     {post.memoUpdatedAt ? (
                       <p className="mt-2 text-[11px] text-muted">最終更新: {formatDateTime(post.memoUpdatedAt)}</p>
@@ -737,7 +737,7 @@ export default function TimelinePage() {
               type="button"
               onClick={handleLoadMore}
               disabled={isLoading}
-              className="rounded-full border border-strap/40 bg-white px-5 py-2 text-sm text-muted shadow-sm disabled:opacity-60"
+              className="rounded-full border border-strap/40 bg-surface px-5 py-2 text-sm text-muted shadow-sm disabled:opacity-60"
             >
               {isLoading ? "読み込み中..." : "さらに読み込む"}
             </button>
