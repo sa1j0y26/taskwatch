@@ -302,7 +302,7 @@ export default function MyPage() {
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[3fr_2fr]">
-        <div className="rounded-2xl border border-strap/50 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-strap/50 bg-surface p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="text-lg font-semibold text-forest">週間タスク時間</h2>
@@ -429,7 +429,7 @@ function StatCard({ title, value, helper, accent = false, loading = false }: Sta
       className={`rounded-2xl border p-6 shadow-sm transition ${
         accent
           ? "border-accent/40 bg-accent-soft"
-          : "border-strap/40 bg-white hover:border-accent/40"
+          : "border-strap/40 bg-surface hover:border-accent/40"
       }`}
     >
       <p className={`text-xs font-semibold uppercase tracking-wide ${accent ? "text-accent" : "text-muted"}`}>
@@ -485,7 +485,7 @@ function PendingEvaluationsPanel({
   }, [isLoading, total, occurrences.length])
 
   return (
-    <div className="flex h-full flex-col rounded-2xl border border-strap/50 bg-white p-6 shadow-sm">
+    <div className="flex h-full flex-col rounded-2xl border border-strap/50 bg-surface p-6 shadow-sm">
       <header className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-forest">未評価タスク</h2>
@@ -524,7 +524,7 @@ function PendingEvaluationsPanel({
             {occurrences.map((occurrence) => (
               <li
                 key={occurrence.id}
-                className="rounded-xl border border-strap/40 bg-white p-4 shadow-sm"
+                className="rounded-xl border border-strap/40 bg-surface p-4 shadow-sm"
               >
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <h3 className="text-sm font-semibold text-forest">
@@ -554,7 +554,7 @@ function PendingEvaluationsPanel({
                     type="button"
                     onClick={() => onEvaluate(occurrence, "MISSED")}
                     disabled={updatingId === occurrence.id}
-                    className="rounded-full border border-red-200 bg-white px-4 py-1.5 font-medium text-red-600 shadow-sm disabled:opacity-60"
+                    className="rounded-full border border-red-200 bg-surface px-4 py-1.5 font-medium text-red-600 shadow-sm disabled:opacity-60"
                   >
                     未達成として記録
                   </button>

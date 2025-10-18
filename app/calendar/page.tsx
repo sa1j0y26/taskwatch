@@ -71,7 +71,7 @@ const STATUS_LABEL: Record<OccurrenceStatus, string> = {
 }
 
 const STATUS_CLASS: Record<OccurrenceStatus, string> = {
-  SCHEDULED: "border-strap/40 bg-white text-forest",
+  SCHEDULED: "border-strap/40 bg-surface text-forest",
   DONE: "border-accent/40 bg-accent/15 text-forest",
   MISSED: "border-strap/40 bg-strap/60 text-forest",
 }
@@ -794,7 +794,7 @@ export default function CalendarPage() {
           className={`rounded-full px-5 py-2 text-sm font-medium shadow transition ${
             selectedFriend === "me"
               ? "bg-accent text-white hover:brightness-105"
-              : "cursor-not-allowed border border-strap/50 bg-white text-muted"
+              : "cursor-not-allowed border border-strap/50 bg-surface text-muted"
           }`}
         >
           新しい予定を追加
@@ -830,7 +830,7 @@ export default function CalendarPage() {
                     className={`rounded-full border px-4 py-1.5 text-sm transition ${
                       selectedFriend === friend.id
                         ? "border-accent/40 bg-accent text-white shadow"
-                        : "border-strap/40 bg-white text-forest/80 hover:bg-accent-soft"
+                        : "border-strap/40 bg-surface text-forest/80 hover:bg-accent-soft"
                     }`}
                   >
                     <span className="flex items-center gap-2">
@@ -845,7 +845,7 @@ export default function CalendarPage() {
         </div>
 
         <div className="grid items-start gap-6 lg:grid-cols-[3fr_2fr]">
-          <div className="rounded-2xl border border-strap/40 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-strap/40 bg-surface p-6 shadow-sm">
             <header className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold text-forest">{headerMonthLabel}</h2>
@@ -956,7 +956,7 @@ export default function CalendarPage() {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-strap/40 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-strap/40 bg-surface p-6 shadow-sm">
             <div className="space-y-6">
               <div>
                 <h3 className="text-sm font-semibold text-forest">
@@ -1110,7 +1110,7 @@ export default function CalendarPage() {
                         type="button"
                         onClick={handleDeleteEvent}
                         disabled={isDeletePending}
-                        className="rounded-full border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 disabled:opacity-60"
+                        className="rounded-full border border-red-200 bg-surface px-4 py-2 text-sm font-medium text-red-600 disabled:opacity-60"
                       >
                         {isDeletePending ? "削除中..." : "予定を削除"}
                       </button>

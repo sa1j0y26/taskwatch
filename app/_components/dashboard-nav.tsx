@@ -25,7 +25,7 @@ export function DashboardNav({ onNavigate }: DashboardNavProps) {
     <nav>
       <ul className="flex flex-col gap-4">
         <li>
-          <div className="space-y-2 rounded-2xl border border-strap/30 bg-white/80 p-5 shadow-sm backdrop-blur">
+          <div className="space-y-2 rounded-2xl border border-strap/30 bg-surface-elevated/80 p-5 shadow-sm backdrop-blur">
             <h2 className="text-xl font-semibold text-forest">ダッシュボード</h2>
             <p className="text-xs text-muted">
               習慣・学習タスクの進捗を一箇所で把握しましょう。
@@ -42,7 +42,7 @@ export function DashboardNav({ onNavigate }: DashboardNavProps) {
                 className={`flex flex-col rounded-xl border px-4 py-3 transition ${
                   isActive
                     ? "border-accent/40 bg-forest text-white shadow"
-                    : "border-strap/40 bg-white text-forest/80 hover:bg-accent-soft"
+                    : "border-strap/40 bg-surface-elevated text-forest/80 hover:bg-accent-soft"
                 }`}
               >
                 <span className="text-sm font-medium">{item.label}</span>
@@ -58,7 +58,7 @@ export function DashboardNav({ onNavigate }: DashboardNavProps) {
             <Link
               href="mailto:support@taskwatch.app"
               onClick={onNavigate}
-              className="rounded-xl border border-strap/40 bg-white px-4 py-3 text-sm font-medium text-forest/80 transition hover:bg-forest/10"
+              className="rounded-xl border border-strap/40 bg-surface-elevated px-4 py-3 text-sm font-medium text-forest/80 transition hover:bg-forest/10"
             >
               お問い合わせ
             </Link>
@@ -80,7 +80,7 @@ function SignOutButton({ onNavigate }: { onNavigate?: () => void }) {
     >
       <button
         type="submit"
-        className="w-full rounded-xl border border-strap/40 bg-white px-4 py-3 text-left text-sm font-medium text-forest/80 transition hover:bg-accent-soft"
+        className="w-full rounded-xl border border-strap/40 bg-surface-elevated px-4 py-3 text-left text-sm font-medium text-forest/80 transition hover:bg-accent-soft"
       >
         サインアウト
       </button>

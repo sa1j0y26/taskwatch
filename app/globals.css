@@ -1,14 +1,16 @@
 @import "tailwindcss";
 
 :root {
+  color-scheme: light;
   --background: #eef8f2;
   --foreground: #181d1b;
   --text-strong: #121614;
   --forest: #0b5d3c;
   --forest-muted: #15895a;
-  --strap: #bae5c9;
+  --strap: #c1e8d2;
   --muted: #4b5752;
   --surface: #ffffff;
+  --surface-elevated: #ffffff;
   --accent: #0f7a4b;
   --accent-soft: #c9efd8;
   --font-geist-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -17,16 +19,18 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #071d14;
-    --foreground: #e4f3ea;
-    --text-strong: #e9f7ee;
+    color-scheme: dark;
+    --background: #04130b;
+    --foreground: #f1f8f5;
+    --text-strong: #ffffff;
     --forest: #4fd19f;
-    --forest-muted: #379c73;
-    --strap: #1b3f2d;
-    --muted: #a7d6bc;
-    --surface: #0f2a1d;
+    --forest-muted: #2b8760;
+    --strap: #2a5a40;
+    --muted: #bedfd0;
+    --surface: #0c2417;
+    --surface-elevated: #164b35;
     --accent: #4fd19f;
-    --accent-soft: #18412e;
+    --accent-soft: #123c2a;
   }
 }
 
@@ -60,6 +64,26 @@ body {
 
 .bg-surface {
   background-color: var(--surface);
+}
+
+.bg-surface-elevated {
+  background-color: var(--surface-elevated);
+}
+
+.bg-white {
+  background-color: var(--surface) !important;
+}
+
+.bg-white\/80 {
+  background-color: color-mix(in srgb, var(--surface) 80%, transparent) !important;
+}
+
+.bg-surface\/80 {
+  background-color: color-mix(in srgb, var(--surface) 80%, transparent);
+}
+
+.bg-surface-elevated\/80 {
+  background-color: color-mix(in srgb, var(--surface-elevated) 80%, transparent);
 }
 
 .bg-forest {

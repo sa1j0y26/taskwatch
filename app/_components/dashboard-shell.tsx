@@ -31,7 +31,7 @@ export function DashboardShell({
           <button
             type="button"
             onClick={() => setDrawerOpen(true)}
-            className="flex items-center gap-2 rounded-full border border-strap/60 bg-white px-4 py-2 text-sm font-medium text-forest/80 shadow-sm"
+            className="flex items-center gap-2 rounded-full border border-strap/60 bg-surface-elevated px-4 py-2 text-sm font-medium text-forest/80 shadow-sm"
           >
             <span className="inline-flex h-4 w-4 flex-col justify-between">
               <span className="block h-[2px] w-full rounded bg-forest"></span>
@@ -82,7 +82,7 @@ export function DashboardShell({
           onClick={() => setDrawerOpen(false)}
         />
         <div
-          className={`absolute left-0 top-0 h-full w-80 max-w-[80vw] -translate-x-full bg-white p-6 shadow-xl transition-transform ${
+          className={`absolute left-0 top-0 h-full w-80 max-w-[80vw] -translate-x-full bg-surface-elevated p-6 shadow-xl transition-transform ${
             drawerOpen ? "translate-x-0" : ""
           }`}
         >

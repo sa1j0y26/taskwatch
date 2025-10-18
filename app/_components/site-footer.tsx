@@ -2,7 +2,7 @@ import Link from "next/link"
 
 export function SiteFooter() {
   return (
-    <footer className="border-t border-strap/30 bg-white/80">
+    <footer className="border-t border-strap/30 bg-surface/80">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-6 py-8 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1 text-sm text-muted">
           <p className="font-semibold text-forest">Taskwatch</p>
