@@ -22,6 +22,12 @@ export default auth((req) => {
   const { pathname, search, hash } = req.nextUrl
 
   if (isPublic(pathname)) {
+    if (pathname === "/" && req.auth) {
+      const redirectUrl = new URL("/mypage", req.nextUrl)
+      redirectUrl.search = ""
+      redirectUrl.hash = ""
+      return NextResponse.redirect(redirectUrl)
+    }
     return NextResponse.next()
   }
 
