@@ -54,6 +54,47 @@ body {
     "Segoe UI", sans-serif;
 }
 
+button,
+[role="button"],
+.button-like {
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    box-shadow 180ms ease,
+    transform 150ms ease;
+}
+
+button *,
+[role="button"] *,
+.button-like * {
+  cursor: inherit;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"],
+.button-like[aria-disabled="true"],
+.button-like.disabled {
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+button:not(:disabled):hover,
+[role="button"]:not([aria-disabled="true"]):hover,
+.button-like:not(.disabled):hover {
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 14%, transparent);
+  transform: translateY(-1px);
+}
+
+button:not(:disabled):active,
+[role="button"]:not([aria-disabled="true"]):active,
+.button-like:not(.disabled):active {
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 18%, transparent);
+  transform: translateY(0);
+}
+
 .bg-background {
   background-color: var(--background);
 }

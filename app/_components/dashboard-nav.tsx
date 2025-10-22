@@ -39,7 +39,7 @@ export function DashboardNav({ onNavigate }: DashboardNavProps) {
               <Link
                 href={item.href}
                 onClick={onNavigate}
-                className={`flex flex-col rounded-xl border px-4 py-3 transition ${
+                className={`button-like flex flex-col rounded-xl border px-4 py-3 transition ${
                   isActive
                     ? "border-accent/40 bg-forest text-white shadow"
                     : "border-strap/40 bg-surface-elevated text-forest/80 hover:bg-accent-soft"
@@ -58,7 +58,7 @@ export function DashboardNav({ onNavigate }: DashboardNavProps) {
             <Link
               href="mailto:support@taskwatch.app"
               onClick={onNavigate}
-              className="rounded-xl border border-strap/40 bg-surface-elevated px-4 py-3 text-sm font-medium text-forest/80 transition hover:bg-forest/10"
+              className="button-like rounded-xl border border-strap/40 bg-surface-elevated px-4 py-3 text-sm font-medium text-forest/80 transition hover:bg-forest/10"
             >
               お問い合わせ
             </Link>

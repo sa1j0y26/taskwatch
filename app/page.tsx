@@ -37,7 +37,7 @@ export default function Home() {
               <SignIn />
               <Link
                 href="mailto:support@taskwatch.app"
-                className="rounded-full border border-strap/40 px-4 py-2 text-sm font-semibold text-forest/80 transition hover:bg-accent-soft"
+                className="button-like rounded-full border border-strap/40 px-4 py-2 text-sm font-semibold text-forest/80 transition hover:bg-accent-soft"
               >
                 お問い合わせ
               </Link>
