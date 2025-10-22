@@ -13,6 +13,9 @@
   --surface-elevated: #ffffff;
   --accent: #0f7a4b;
   --accent-soft: #c9efd8;
+  --hero-start: #ffffff;
+  --hero-mid: #f0fbf4;
+  --hero-end: #c9efd8;
   --font-geist-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-geist-mono: "Menlo", "SFMono-Regular", "Consolas", monospace;
 }
@@ -31,6 +34,9 @@
     --surface-elevated: #164b35;
     --accent: #4fd19f;
     --accent-soft: #123c2a;
+    --hero-start: #132920;
+    --hero-mid: #0b1c14;
+    --hero-end: #1d5b41;
   }
 }
 
@@ -93,6 +99,10 @@ button:not(:disabled):active,
 .button-like:not(.disabled):active {
   box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 18%, transparent);
   transform: translateY(0);
+}
+
+.hero-card {
+  background: linear-gradient(135deg, var(--hero-start) 0%, var(--hero-mid) 55%, var(--hero-end) 100%);
 }
 
 .bg-background {

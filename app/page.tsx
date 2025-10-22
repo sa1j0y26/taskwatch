@@ -19,9 +19,9 @@ const FEATURE_CARDS = [
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-surface">
+    <div className="min-h-screen bg-background">
       <div className="relative mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-16 px-6 py-12 lg:py-20">
-        <header className="flex flex-col gap-6 rounded-3xl border border-strap/40 bg-gradient-to-br from-white via-emerald-50 to-strap/50 p-10 shadow-sm md:flex-row md:items-center md:justify-between">
+        <header className="hero-card flex flex-col gap-6 rounded-3xl border border-strap/40 p-10 shadow-sm md:flex-row md:items-center md:justify-between">
           <div className="max-w-2xl space-y-4">
             <p className="text-sm font-semibold uppercase tracking-wide text-muted">
               共勉強を習慣に
@@ -36,7 +36,7 @@ export default function Home() {
             <div className="flex flex-wrap items-center gap-3">
               <SignIn />
               <Link
-                href="mailto:support@taskwatch.app"
+                href="mailto:sa1j0y26@gmail.com"
                 className="button-like rounded-full border border-strap/40 px-4 py-2 text-sm font-semibold text-forest/80 transition hover:bg-accent-soft"
               >
                 お問い合わせ
@@ -49,7 +49,7 @@ export default function Home() {
           {FEATURE_CARDS.map((feature) => (
             <article
               key={feature.title}
-              className="rounded-2xl border border-strap/40 bg-surface p-6 shadow-sm"
+              className="rounded-2xl border border-strap/40 bg-surface-elevated p-6 shadow-sm"
             >
               <h2 className="text-lg font-semibold text-forest">{feature.title}</h2>
               <p className="mt-3 text-sm text-muted">{feature.body}</p>
