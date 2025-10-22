@@ -56,7 +56,7 @@ export function DashboardNav({ onNavigate }: DashboardNavProps) {
         <li>
           <div className="flex flex-col gap-2 text-xs text-muted">
             <Link
-              href="mailto:support@taskwatch.app"
+              href="mailto:sa1j0y26@gmail.com"
               onClick={onNavigate}
               className="button-like rounded-xl border border-strap/40 bg-surface-elevated px-4 py-3 text-sm font-medium text-forest/80 transition hover:bg-forest/10"
             >

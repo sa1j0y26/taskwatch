@@ -10,7 +10,7 @@ export function SiteFooter() {
         </div>
         <nav className="flex flex-wrap gap-3 text-sm text-forest/80">
           <Link
-            href="mailto:support@taskwatch.app"
+            href="mailto:sa1j0y26@gmail.com"
             className="button-like rounded-full px-3 py-2 transition hover:bg-forest/10"
           >
             お問い合わせ
