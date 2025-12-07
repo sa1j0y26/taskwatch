@@ -90,6 +90,7 @@ export async function GET(request: Request) {
               id: true,
               title: true,
               tag: true,
+              is_all_day: true,
               visibility: true,
             },
           },
@@ -105,6 +106,7 @@ export async function GET(request: Request) {
             id: occurrence.event.id,
             title: occurrence.event.title,
             tag: occurrence.event.tag,
+            isAllDay: occurrence.event.is_all_day,
             visibility: occurrence.event.visibility,
           }
         : null,

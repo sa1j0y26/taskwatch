@@ -14,12 +14,14 @@ type OccurrenceResponse = {
   endAt: string
   status: OccurrenceStatus
   notes: string | null
+  isAllDay: boolean
   event: {
     id: string
     title: string
     tag?: string | null
     rrule?: string | null
     visibility: string | null
+    isAllDay?: boolean | null
   } | null
 }
 
@@ -33,6 +35,7 @@ type CalendarOccurrence = {
   status: OccurrenceStatus
   notes: string | null
   rrule: string | null
+  allDay: boolean
 }
 
 type WeekDay = {
@@ -52,7 +55,10 @@ type FormState = {
   tag: string
   notes: string
   repeat: RepeatOption
+  allDay: boolean
 }
+
+type FormFieldChangeHandler = <K extends keyof FormState>(field: K, value: FormState[K]) => void
 
 type FriendOption = {
   id: string
@@ -63,6 +69,8 @@ type FriendOption = {
 const START_HOUR = 6
 const END_HOUR = 22
 const HOUR_HEIGHT = 44
+const ALL_DAY_START_TIME = "00:00"
+const ALL_DAY_DURATION_MINUTES = 1440
 
 const STATUS_LABEL: Record<OccurrenceStatus, string> = {
   SCHEDULED: "予定",
@@ -258,6 +266,7 @@ export default function CalendarPage() {
           status: occurrence.status,
           notes: occurrence.notes,
           rrule: occurrence.event?.rrule ?? null,
+          allDay: Boolean(occurrence.isAllDay || occurrence.event?.isAllDay),
         }
 
         if (!grouped[dateKey]) {
@@ -321,6 +330,8 @@ export default function CalendarPage() {
   }, [fetchOccurrences, applyOccurrences, selectedFriend])
 
   const dayOccurrences = occurrencesByDay[selectedDay] ?? []
+  const allDayOccurrences = dayOccurrences.filter((item) => item.allDay)
+  const timedOccurrences = dayOccurrences.filter((item) => !item.allDay)
   const selectedOccurrence = selectedEventId ? occurrenceIndex[selectedEventId] ?? null : null
   const isRecurring = Boolean(selectedOccurrence?.rrule)
 
@@ -348,6 +359,7 @@ export default function CalendarPage() {
         tag: selectedOccurrence.tag ?? "",
         notes: selectedOccurrence.notes ?? "",
         repeat: parseRepeatOption(selectedOccurrence.rrule),
+        allDay: selectedOccurrence.allDay,
       }
       setFormState(nextState)
       setOriginalState(nextState)
@@ -411,7 +423,7 @@ export default function CalendarPage() {
     setDeleteScope("single")
   }
 
-  const handleFormChange = (field: keyof FormState, value: string) => {
+  const handleFormChange = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setFormState((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -429,12 +441,20 @@ export default function CalendarPage() {
       errors.push("日付を選択してください。")
     }
 
-    const startDate = formState.date ? combineDateTime(formState.date, formState.startTime) : null
-    const endDate = formState.date ? combineDateTime(formState.date, formState.endTime) : null
+    let startDate: Date | null = null
+    let endDate: Date | null = null
+
+    if (formState.allDay) {
+      startDate = formState.date ? combineDateTime(formState.date, ALL_DAY_START_TIME) : null
+      endDate = startDate ? new Date(startDate.getTime() + ALL_DAY_DURATION_MINUTES * 60 * 1000) : null
+    } else {
+      startDate = formState.date ? combineDateTime(formState.date, formState.startTime) : null
+      endDate = formState.date ? combineDateTime(formState.date, formState.endTime) : null
+    }
 
     if (!startDate || !endDate) {
       errors.push("開始・終了時刻の形式が正しくありません。")
-    } else if (endDate <= startDate) {
+    } else if (!formState.allDay && endDate <= startDate) {
       errors.push("終了時刻は開始時刻より後にしてください。")
     }
 
@@ -444,13 +464,16 @@ export default function CalendarPage() {
       return
     }
 
-    const durationMinutes = Math.round((endDate!.getTime() - startDate!.getTime()) / (1000 * 60))
+    const durationMinutes = formState.allDay
+      ? ALL_DAY_DURATION_MINUTES
+      : Math.round((endDate!.getTime() - startDate!.getTime()) / (1000 * 60))
     const trimmedTag = formState.tag.trim()
     const trimmedNotes = formState.notes.trim()
     const rruleString = buildRRule(formState.repeat, startDate!)
 
     const payload = {
       title: trimmedTitle,
+      isAllDay: formState.allDay,
       tag: trimmedTag.length > 0 ? trimmedTag : undefined,
       durationMinutes,
       firstOccurrence: {
@@ -531,6 +554,7 @@ export default function CalendarPage() {
       const originalDate = formatDateKey(selectedOccurrence.start)
       const originalStart = toTimeText(selectedOccurrence.start)
       const originalEnd = toTimeText(selectedOccurrence.end)
+      const originalAllDay = selectedOccurrence.allDay
 
       if (
         formState.date !== originalDate ||
@@ -538,6 +562,12 @@ export default function CalendarPage() {
         formState.endTime !== originalEnd
       ) {
         setFormError("シリーズ全体の日時変更は未対応です。個別に更新してください。")
+        setFormSuccess(null)
+        return
+      }
+
+      if (formState.allDay !== originalAllDay) {
+        setFormError("シリーズ全体の終日設定は未対応です。個別に更新してください。")
         setFormSuccess(null)
         return
       }
@@ -610,12 +640,20 @@ export default function CalendarPage() {
       errors.push("日付を選択してください。")
     }
 
-    const startDate = formState.date ? combineDateTime(formState.date, formState.startTime) : null
-    const endDate = formState.date ? combineDateTime(formState.date, formState.endTime) : null
+    let startDate: Date | null = null
+    let endDate: Date | null = null
+
+    if (formState.allDay) {
+      startDate = formState.date ? combineDateTime(formState.date, ALL_DAY_START_TIME) : null
+      endDate = startDate ? new Date(startDate.getTime() + ALL_DAY_DURATION_MINUTES * 60 * 1000) : null
+    } else {
+      startDate = formState.date ? combineDateTime(formState.date, formState.startTime) : null
+      endDate = formState.date ? combineDateTime(formState.date, formState.endTime) : null
+    }
 
     if (!startDate || !endDate) {
       errors.push("開始・終了時刻の形式が正しくありません。")
-    } else if (endDate <= startDate) {
+    } else if (!formState.allDay && endDate <= startDate) {
       errors.push("終了時刻は開始時刻より後にしてください。")
     }
 
@@ -634,12 +672,19 @@ export default function CalendarPage() {
       if (trimmedTag !== originalTag) {
         eventUpdates.tag = trimmedTag.length > 0 ? trimmedTag : null
       }
+      if (formState.allDay !== selectedOccurrence.allDay) {
+        eventUpdates.isAllDay = formState.allDay
+      }
     }
 
-    const newDuration = Math.round((endDate!.getTime() - startDate!.getTime()) / (1000 * 60))
-    const currentDuration = Math.round(
-      (selectedOccurrence.end.getTime() - selectedOccurrence.start.getTime()) / (1000 * 60),
-    )
+    const newDuration = formState.allDay
+      ? ALL_DAY_DURATION_MINUTES
+      : Math.round((endDate!.getTime() - startDate!.getTime()) / (1000 * 60))
+    const currentDuration = selectedOccurrence.allDay
+      ? ALL_DAY_DURATION_MINUTES
+      : Math.round(
+          (selectedOccurrence.end.getTime() - selectedOccurrence.start.getTime()) / (1000 * 60),
+        )
 
     if (!isRecurring && newDuration !== currentDuration) {
       eventUpdates.durationMinutes = newDuration
@@ -654,6 +699,9 @@ export default function CalendarPage() {
     }
     if (trimmedNotes !== (selectedOccurrence.notes ?? "")) {
       occurrenceUpdates.notes = trimmedNotes.length > 0 ? trimmedNotes : null
+    }
+    if (formState.allDay !== selectedOccurrence.allDay) {
+      occurrenceUpdates.isAllDay = formState.allDay
     }
 
     if (Object.keys(eventUpdates).length === 0 && Object.keys(occurrenceUpdates).length === 0) {
@@ -717,6 +765,7 @@ export default function CalendarPage() {
           tag: trimmedTag,
           notes: trimmedNotes,
           repeat: formState.repeat,
+          allDay: formState.allDay,
         }
         setFormState(nextState)
         setOriginalState(nextState)
@@ -886,6 +935,40 @@ export default function CalendarPage() {
             </div>
 
             <div className="mt-6 rounded-2xl border border-strap/30 bg-surface">
+              {allDayOccurrences.length > 0 ? (
+                <div className="border-b border-strap/30 px-4 py-3">
+                  <p className="text-xs font-semibold text-muted">終日の予定</p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {allDayOccurrences.map((item) => {
+                      const isSelected = selectedEventId === item.id
+                      return (
+                        <button
+                          key={item.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedEventId(item.id)
+                            setIsCreating(false)
+                            setFormSuccess(null)
+                            setFormError(null)
+                          }}
+                          className={`button-like rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                            isSelected
+                              ? "border-accent/40 bg-accent text-white shadow"
+                              : "border-strap/40 bg-surface text-forest/80 hover:bg-accent-soft"
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span>{item.title}</span>
+                            {item.tag ? (
+                              <span className="text-[10px] uppercase text-muted">#{item.tag}</span>
+                            ) : null}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : null}
               <div className="relative grid grid-cols-[60px_1fr] divide-x divide-strap/30">
                 <div className="flex flex-col text-xs text-muted">
                   {Array.from({ length: END_HOUR - START_HOUR + 1 }, (_, index) => {
@@ -916,8 +999,12 @@ export default function CalendarPage() {
                       <div className="flex h-full items-center justify-center p-6 text-sm text-muted">
                         この日の予定は登録されていません。
                       </div>
+                    ) : timedOccurrences.length === 0 ? (
+                      <div className="flex h-full items-center justify-center p-6 text-sm text-muted">
+                        時間指定の予定はありません。
+                      </div>
                     ) : (
-                      dayOccurrences.map((item) => {
+                      timedOccurrences.map((item) => {
                         const offset = getMinutesFromStart(item.start) * (HOUR_HEIGHT / 60)
                         const height = Math.max(
                           (item.end.getTime() - item.start.getTime()) / (1000 * 60) * (HOUR_HEIGHT / 60),
@@ -941,7 +1028,7 @@ export default function CalendarPage() {
                           >
                             <p className="text-sm font-semibold">{item.title}</p>
                             <p className="text-[10px] uppercase text-muted">
-                              {toTimeText(item.start)} – {toTimeText(item.end)} / {item.tag ?? "タグ未設定"}
+                              {formatOccurrenceTime(item)} / {item.tag ?? "タグ未設定"}
                             </p>
                             {item.notes ? (
                               <p className="mt-1 text-[11px] text-forest/80 line-clamp-2">{item.notes}</p>
@@ -1152,7 +1239,7 @@ function FormFields({
   disableNotes = false,
 }: {
   formState: FormState
-  onChange: (field: keyof FormState, value: string) => void
+  onChange: FormFieldChangeHandler
   disabled: boolean
   showRepeat?: boolean
   disableTitleTag?: boolean
@@ -1183,34 +1270,58 @@ function FormFields({
           disabled={disabled || disableDateTime}
         />
       </div>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-muted">開始</label>
-          <input
-            type="time"
-            value={formState.startTime}
-            onChange={(event) => onChange("startTime", event.target.value)}
-            className="w-full rounded-lg border border-strap/40 px-3 py-2 text-sm"
-            min="06:00"
-            max="22:00"
-            required
-            disabled={disabled || disableDateTime}
-          />
-        </div>
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-muted">終了</label>
-          <input
-            type="time"
-            value={formState.endTime}
-            onChange={(event) => onChange("endTime", event.target.value)}
-            className="w-full rounded-lg border border-strap/40 px-3 py-2 text-sm"
-            min="06:30"
-            max="23:00"
-            required
-            disabled={disabled || disableDateTime}
-          />
-        </div>
+      <div className="flex items-center gap-2">
+        <input
+          id="allDay"
+          type="checkbox"
+          checked={formState.allDay}
+          onChange={(event) => onChange("allDay", event.target.checked)}
+          disabled={disabled || disableDateTime}
+          className="h-4 w-4 rounded border border-strap/40"
+        />
+        <label htmlFor="allDay" className="text-xs font-medium text-muted">
+          時間を指定しない（終日タスク）
+        </label>
       </div>
+      {formState.allDay ? (
+        <div className="space-y-2">
+          <p className="text-[11px] text-muted">
+            終日の予定は日付の終わりに未評価リストへ追加されます。
+          </p>
+          <div className="rounded-lg border border-dashed border-strap/40 bg-surface px-3 py-2 text-xs text-muted">
+            この予定は終日扱いです。必要に応じてチェックを外すと開始・終了時刻を設定できます。
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted">開始</label>
+            <input
+              type="time"
+              value={formState.startTime}
+              onChange={(event) => onChange("startTime", event.target.value)}
+              className="w-full rounded-lg border border-strap/40 px-3 py-2 text-sm"
+              min="06:00"
+              max="22:00"
+              required
+              disabled={disabled || disableDateTime}
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-muted">終了</label>
+            <input
+              type="time"
+              value={formState.endTime}
+              onChange={(event) => onChange("endTime", event.target.value)}
+              className="w-full rounded-lg border border-strap/40 px-3 py-2 text-sm"
+              min="06:30"
+              max="23:00"
+              required
+              disabled={disabled || disableDateTime}
+            />
+          </div>
+        </div>
+      )}
       <div className="space-y-2">
         <label className="text-xs font-medium text-muted">タグ</label>
         <input
@@ -1260,6 +1371,7 @@ function createDefaultFormState(dateKey: string): FormState {
     tag: "",
     notes: "",
     repeat: "none",
+    allDay: false,
   }
 }
 
@@ -1323,6 +1435,13 @@ function toTimeText(date: Date) {
   const hours = date.getHours().toString().padStart(2, "0")
   const minutes = date.getMinutes().toString().padStart(2, "0")
   return `${hours}:${minutes}`
+}
+
+function formatOccurrenceTime(occurrence: CalendarOccurrence) {
+  if (occurrence.allDay) {
+    return "終日"
+  }
+  return `${toTimeText(occurrence.start)} – ${toTimeText(occurrence.end)}`
 }
 
 function buildRRule(repeat: RepeatOption, startDate: Date) {

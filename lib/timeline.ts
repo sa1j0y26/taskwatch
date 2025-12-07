@@ -30,10 +30,12 @@ export const timelinePostInclude = Prisma.validator<Prisma.TimelinePostInclude>(
       status: true,
       start_at: true,
       end_at: true,
+      is_all_day: true,
       event: {
         select: {
           id: true,
           title: true,
+          is_all_day: true,
           tag: true,
         },
       },
@@ -139,10 +141,12 @@ export function serializeTimelinePost(post: TimelinePostWithRelations, viewerId?
           status: post.occurrence.status,
           startAt: post.occurrence.start_at.toISOString(),
           endAt: post.occurrence.end_at.toISOString(),
+          isAllDay: post.occurrence.is_all_day,
           event: post.occurrence.event
             ? {
                 id: post.occurrence.event.id,
                 title: post.occurrence.event.title,
+                isAllDay: post.occurrence.event.is_all_day,
                 tag: post.occurrence.event.tag,
               }
             : null,

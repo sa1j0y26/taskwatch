@@ -4,6 +4,7 @@ const MINUTES_IN_MS = 1000 * 60
 export const XP_PER_MINUTE = 2
 export const XP_PENALTY_MISSED = 20
 export const LEVEL_STEP = 500
+export const ALL_DAY_EFFECTIVE_MINUTES = 60
 
 export function startOfWeekUTC(date: Date) {
   const result = new Date(date)
@@ -31,11 +32,14 @@ export function minutesBetweenUtc(start: Date, end: Date) {
   return Math.max(0, Math.round(diff / MINUTES_IN_MS))
 }
 
-export function computeXp(occurrences: Array<{ status: OccurrenceStatus; start_at: Date; end_at: Date }>) {
+export function computeXp(
+  occurrences: Array<{ status: OccurrenceStatus; start_at: Date; end_at: Date; is_all_day?: boolean }>,
+) {
   let totalXp = 0
 
   occurrences.forEach((occurrence) => {
-    const durationMinutes = minutesBetweenUtc(occurrence.start_at, occurrence.end_at)
+    const rawMinutes = minutesBetweenUtc(occurrence.start_at, occurrence.end_at)
+    const durationMinutes = occurrence.is_all_day ? ALL_DAY_EFFECTIVE_MINUTES : rawMinutes
 
     if (occurrence.status === OccurrenceStatus.DONE) {
       totalXp += durationMinutes * XP_PER_MINUTE

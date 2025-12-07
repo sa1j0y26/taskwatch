@@ -116,7 +116,7 @@ export async function PATCH(request: NextRequest, context: unknown) {
     return jsonErrorWithStatus("INVALID_BODY", "Request body must be an object.", { status: 400 })
   }
 
-  const { title, description, tag, visibility, durationMinutes, rrule, exdates } = payload
+  const { title, description, tag, visibility, durationMinutes, rrule, exdates, isAllDay } = payload
 
   const allowedKeys = new Set([
     "title",
@@ -126,6 +126,7 @@ export async function PATCH(request: NextRequest, context: unknown) {
     "durationMinutes",
     "rrule",
     "exdates",
+    "isAllDay",
   ])
 
   const unknownKeys = Object.keys(payload).filter((key) => !allowedKeys.has(key))
@@ -184,6 +185,17 @@ export async function PATCH(request: NextRequest, context: unknown) {
       issues.durationMinutes = "durationMinutes must be between 5 and 1440."
     } else {
       updateData.duration_minutes = durationMinutes
+    }
+  }
+
+  if (isAllDay !== undefined) {
+    if (typeof isAllDay !== "boolean") {
+      issues.isAllDay = "isAllDay must be a boolean."
+    } else {
+      updateData.is_all_day = isAllDay
+      if (isAllDay && durationMinutes === undefined) {
+        updateData.duration_minutes = 1440
+      }
     }
   }
 

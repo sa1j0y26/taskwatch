@@ -2,6 +2,7 @@ import { auth } from "@/auth"
 import { jsonErrorWithStatus, jsonSuccess } from "@/lib/api-response"
 import { getFriendIdsForUser } from "@/lib/friendship"
 import { prisma } from "@/lib/prisma"
+import { ALL_DAY_EFFECTIVE_MINUTES } from "@/lib/stats"
 import { publicUserSelect, serializePublicUser } from "@/lib/user"
 
 const METRICS = ["totalMinutes", "completionRate", "streak"] as const
@@ -69,6 +70,7 @@ export async function GET(request: Request) {
         start_at: true,
         end_at: true,
         status: true,
+        is_all_day: true,
       },
     })
 
@@ -97,7 +99,8 @@ export async function GET(request: Request) {
               (1000 * 60),
           ),
         )
-        stats.totalMinutes += durationMinutes
+        const effectiveMinutes = occurrence.is_all_day ? ALL_DAY_EFFECTIVE_MINUTES : durationMinutes
+        stats.totalMinutes += effectiveMinutes
         stats.streakDates.add(formatDateKey(new Date(occurrence.start_at)))
       } else if (occurrence.status === "MISSED") {
         stats.missedCount += 1

@@ -17,10 +17,12 @@ type TimelineOccurrence = {
   status: "SCHEDULED" | "DONE" | "MISSED"
   startAt: string
   endAt: string
+  isAllDay: boolean
   event: {
     id: string
     title: string
     tag: string | null
+    isAllDay?: boolean | null
   } | null
 } | null
 
@@ -621,7 +623,11 @@ export default function TimelinePage() {
                   <div className="rounded-xl border border-strap/30 bg-surface px-4 py-3 text-xs text-muted">
                     <p className="font-medium text-forest">{post.occurrence.event?.title ?? "タスク"}</p>
                     <p>
-                      {formatTimeRange(post.occurrence.startAt, post.occurrence.endAt)} ・ {post.occurrence.status === "DONE" ? "達成" : post.occurrence.status === "MISSED" ? "未達成" : "予定"}
+                      {formatTimeRange(
+                        post.occurrence.startAt,
+                        post.occurrence.endAt,
+                        post.occurrence.isAllDay,
+                      )} ・ {post.occurrence.status === "DONE" ? "達成" : post.occurrence.status === "MISSED" ? "未達成" : "予定"}
                     </p>
                   </div>
                 ) : null}
@@ -778,7 +784,7 @@ function formatRelativeTime(isoString: string) {
   return formatter.format(diffDays, "day")
 }
 
-function formatTimeRange(startIso: string, endIso: string) {
+function formatTimeRange(startIso: string, endIso: string, isAllDay = false) {
   const start = new Date(startIso)
   const end = new Date(endIso)
   const dateFormatter = new Intl.DateTimeFormat("ja", {
@@ -789,6 +795,10 @@ function formatTimeRange(startIso: string, endIso: string) {
     hour: "2-digit",
     minute: "2-digit",
   })
+
+  if (isAllDay) {
+    return `${dateFormatter.format(start)} 終日`
+  }
 
   return `${dateFormatter.format(start)} ${timeFormatter.format(start)} - ${timeFormatter.format(end)}`
 }

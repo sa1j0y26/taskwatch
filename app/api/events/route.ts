@@ -154,6 +154,7 @@ export async function POST(request: Request) {
     rrule,
     exdates,
     firstOccurrence,
+    isAllDay,
   } = payload
 
   const issues: Record<string, string> = {}
@@ -165,7 +166,20 @@ export async function POST(request: Request) {
     issues.title = "Title must be 120 characters or less."
   }
 
-  const duration = typeof durationMinutes === "number" ? Math.floor(durationMinutes) : NaN
+  let normalizedIsAllDay = false
+  if (isAllDay != null) {
+    if (typeof isAllDay !== "boolean") {
+      issues.isAllDay = "isAllDay must be a boolean if provided."
+    } else {
+      normalizedIsAllDay = isAllDay
+    }
+  }
+
+  let duration = typeof durationMinutes === "number" ? Math.floor(durationMinutes) : NaN
+  if (normalizedIsAllDay) {
+    duration = 1440
+  }
+
   if (!Number.isInteger(duration) || duration < 5 || duration > 1440) {
     issues.durationMinutes = "durationMinutes must be an integer between 5 and 1440."
   }
@@ -228,6 +242,7 @@ export async function POST(request: Request) {
     startAt: Date
     endAt: Date
     notes: string | null
+    isAllDay: boolean
   } | null = null
 
   if (firstOccurrence != null) {
@@ -251,6 +266,7 @@ export async function POST(request: Request) {
           startAt: parsedStart,
           endAt: parsedEnd,
           notes: typeof notes === "string" && notes.trim() ? notes.trim() : null,
+          isAllDay: normalizedIsAllDay,
         }
       }
     }
@@ -294,6 +310,7 @@ export async function POST(request: Request) {
         description: typeof description === "string" && description.trim() ? description.trim() : null,
         visibility: normalizedVisibility,
         duration_minutes: duration,
+        is_all_day: normalizedIsAllDay,
         rrule: normalizedRrule,
         exdates: normalizedExdates,
       },
@@ -308,6 +325,7 @@ export async function POST(request: Request) {
           user_id: viewerId,
           start_at: normalizedFirstOccurrence.startAt,
           end_at: normalizedFirstOccurrence.endAt,
+          is_all_day: normalizedFirstOccurrence.isAllDay,
           status: OccurrenceStatus.SCHEDULED,
           notes: normalizedFirstOccurrence.notes,
         },
@@ -324,6 +342,7 @@ export async function POST(request: Request) {
               user_id: viewerId,
               start_at: startDate,
               end_at: new Date(startDate.getTime() + duration * 60 * 1000),
+              is_all_day: normalizedFirstOccurrence?.isAllDay ?? false,
               status: OccurrenceStatus.SCHEDULED,
               notes: normalizedFirstOccurrence?.notes ?? null,
             },

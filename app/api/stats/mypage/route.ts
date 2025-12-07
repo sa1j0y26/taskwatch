@@ -2,6 +2,7 @@ import { auth } from "@/auth"
 import { jsonErrorWithStatus, jsonSuccess } from "@/lib/api-response"
 import { prisma } from "@/lib/prisma"
 import {
+  ALL_DAY_EFFECTIVE_MINUTES,
   XP_PENALTY_MISSED,
   XP_PER_MINUTE,
   addDaysUTC,
@@ -65,6 +66,7 @@ export async function GET(request: Request) {
         status: true,
         start_at: true,
         end_at: true,
+        is_all_day: true,
       },
     })
 
@@ -103,14 +105,15 @@ export async function GET(request: Request) {
         }
 
         const bucket = weeklyTotalsMap.get(dateKey)!
-        const durationMinutes = minutesBetweenUtc(occurrence.start_at, occurrence.end_at)
-        bucket.plannedMinutes += durationMinutes
+        const rawMinutes = minutesBetweenUtc(occurrence.start_at, occurrence.end_at)
+        const effectiveMinutes = occurrence.is_all_day ? ALL_DAY_EFFECTIVE_MINUTES : rawMinutes
+        bucket.plannedMinutes += effectiveMinutes
 
         if (occurrence.status === OccurrenceStatus.DONE) {
-          bucket.completedMinutes += durationMinutes
+          bucket.completedMinutes += effectiveMinutes
           bucket.doneCount += 1
           weeklyDone += 1
-          weeklyCompletedMinutes += durationMinutes
+          weeklyCompletedMinutes += effectiveMinutes
         } else if (occurrence.status === OccurrenceStatus.MISSED) {
           bucket.missedCount += 1
           weeklyMissed += 1
@@ -122,7 +125,9 @@ export async function GET(request: Request) {
         occurrence.start_at >= previousPeriodStart &&
         occurrence.start_at < previousPeriodEnd
       ) {
-        previousWeekCompletedMinutes += minutesBetweenUtc(occurrence.start_at, occurrence.end_at)
+        const rawMinutes = minutesBetweenUtc(occurrence.start_at, occurrence.end_at)
+        const effectiveMinutes = occurrence.is_all_day ? ALL_DAY_EFFECTIVE_MINUTES : rawMinutes
+        previousWeekCompletedMinutes += effectiveMinutes
       }
 
       if (occurrence.status === OccurrenceStatus.DONE) {

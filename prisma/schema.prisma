@@ -71,6 +71,7 @@ model Event {
   description      String?
   visibility       Visibility      @default(PRIVATE)
   duration_minutes Int
+  is_all_day       Boolean         @default(false)
   rrule            String?
   exdates          DateTime[]      @default([])
   created_at       DateTime        @default(now())
@@ -89,6 +90,7 @@ model Occurrence {
   user_id        String           @db.Uuid
   start_at       DateTime
   end_at         DateTime
+  is_all_day     Boolean          @default(false)
   status         OccurrenceStatus @default(SCHEDULED)
   completed_at   DateTime?
   notes          String?
