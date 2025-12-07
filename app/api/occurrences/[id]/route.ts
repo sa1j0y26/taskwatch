@@ -31,8 +31,8 @@ export async function PATCH(request: NextRequest, context: unknown) {
     return jsonErrorWithStatus("INVALID_BODY", "Request body must be an object.", { status: 400 })
   }
 
-  const { startAt, endAt, notes } = payload
-  const allowedKeys = new Set(["startAt", "endAt", "notes"])
+  const { startAt, endAt, notes, isAllDay } = payload
+  const allowedKeys = new Set(["startAt", "endAt", "notes", "isAllDay"])
   const unknownKeys = Object.keys(payload).filter((key) => !allowedKeys.has(key))
 
   const issues: Record<string, string> = {}
@@ -56,6 +56,10 @@ export async function PATCH(request: NextRequest, context: unknown) {
     }
   }
 
+  if (isAllDay !== undefined && typeof isAllDay !== "boolean") {
+    issues.isAllDay = "isAllDay must be a boolean."
+  }
+
   if (Object.keys(issues).length > 0) {
     return jsonErrorWithStatus("VALIDATION_ERROR", "Request validation failed.", {
       status: 422,
@@ -63,8 +67,8 @@ export async function PATCH(request: NextRequest, context: unknown) {
     })
   }
 
-  if (startAt == null && endAt == null && notes === undefined) {
-    return jsonErrorWithStatus("EMPTY_UPDATE", "Provide startAt/endAt and/or notes to update.", {
+  if (startAt == null && endAt == null && notes === undefined && isAllDay === undefined) {
+    return jsonErrorWithStatus("EMPTY_UPDATE", "Provide startAt/endAt, isAllDay, and/or notes to update.", {
       status: 400,
     })
   }
@@ -114,6 +118,9 @@ export async function PATCH(request: NextRequest, context: unknown) {
     if (notes !== undefined) {
       updates.notes = typeof notes === "string" && notes.trim() ? notes.trim() : null
     }
+    if (typeof isAllDay === "boolean") {
+      updates.is_all_day = isAllDay
+    }
 
     if (Object.keys(updates).length === 0) {
       return jsonErrorWithStatus("NO_CHANGES", "No valid fields provided for update.", {
@@ -124,17 +131,18 @@ export async function PATCH(request: NextRequest, context: unknown) {
     const updated = await prisma.occurrence.update({
       where: { id: occurrenceId },
       data: updates,
-      include: {
-        event: {
-          select: {
-            id: true,
-            title: true,
-            tag: true,
-            visibility: true,
+        include: {
+          event: {
+            select: {
+              id: true,
+              title: true,
+              tag: true,
+              is_all_day: true,
+              visibility: true,
+            },
           },
         },
-      },
-    })
+      })
 
     return jsonSuccess({
       occurrence: {
@@ -144,6 +152,7 @@ export async function PATCH(request: NextRequest, context: unknown) {
               id: updated.event.id,
               title: updated.event.title,
               tag: updated.event.tag,
+              isAllDay: updated.event.is_all_day,
               visibility: updated.event.visibility,
             }
           : null,

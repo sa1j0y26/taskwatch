@@ -101,6 +101,7 @@ export async function GET(request: Request) {
             title: true,
             rrule: true,
             tag: true,
+            is_all_day: true,
             visibility: true,
           },
         },

@@ -12,6 +12,7 @@ type PendingOccurrence = {
   notes: string | null
   status: string
   overdueMinutes: number
+  isAllDay: boolean
   event: {
     id: string
     title: string
@@ -535,7 +536,7 @@ function PendingEvaluationsPanel({
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-muted">
-                  {formatDateRange(occurrence.startAt, occurrence.endAt)}
+                  {formatDateRange(occurrence.startAt, occurrence.endAt, occurrence.isAllDay)}
                   {occurrence.event?.tag ? ` / ${occurrence.event.tag}` : ""}
                 </p>
                 {occurrence.notes ? (
@@ -602,9 +603,17 @@ function formatOverdue(minutes: number) {
   return `${days} 日 ${remHours} 時間 ${remaining} 分`
 }
 
-function formatDateRange(startISO: string, endISO: string) {
+function formatDateRange(startISO: string, endISO: string, isAllDay = false) {
   const start = new Date(startISO)
   const end = new Date(endISO)
+  if (isAllDay) {
+    const formatter = new Intl.DateTimeFormat("ja", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
+    return `${formatter.format(start)} 終日`
+  }
   return `${formatDateTime(start)} 〜 ${formatTime(end)}`
 }
 
