@@ -1348,7 +1348,7 @@ function FormFields({
           <label className="text-xs font-medium text-muted">繰り返し</label>
           <select
             value={formState.repeat}
-            onChange={(event) => onChange("repeat", event.target.value)}
+            onChange={(event) => onChange("repeat", event.target.value as RepeatOption)}
             className="w-full rounded-lg border border-strap/40 px-3 py-2 text-sm"
             disabled={disabled}
           >
