@@ -83,9 +83,9 @@
 
 ### リアルタイム
 
-- WebSocket or Supabase Realtime（Postgresの変更通知を流用）
+- SSE (EventSource) での配信
     
-- タイムライン更新や友人ランキングの即時反映に利用
+- タイムライン更新などの即時反映に利用
     
 
 ---

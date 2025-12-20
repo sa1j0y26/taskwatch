@@ -154,19 +154,53 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const existingOutgoing = await prisma.friendRequest.findFirst({
+    const existingOutgoingRequest = await prisma.friendRequest.findUnique({
       where: {
-        requester_id: viewerId,
-        receiver_id: friendUserId,
-        status: REQUEST_STATUSES.pending,
+        requester_id_receiver_id: {
+          requester_id: viewerId,
+          receiver_id: friendUserId,
+        },
+      },
+      select: {
+        id: true,
+        status: true,
       },
     })
 
-    if (existingOutgoing) {
-      return jsonErrorWithStatus(
-        "REQUEST_ALREADY_EXISTS",
-        "Friend request already sent.",
-        { status: 409 },
+    if (existingOutgoingRequest) {
+      if (existingOutgoingRequest.status === REQUEST_STATUSES.pending) {
+        return jsonErrorWithStatus(
+          "REQUEST_ALREADY_EXISTS",
+          "Friend request already sent.",
+          { status: 409 },
+        )
+      }
+
+      const renewedRequest = await prisma.friendRequest.update({
+        where: { id: existingOutgoingRequest.id },
+        data: {
+          status: REQUEST_STATUSES.pending,
+          responded_at: null,
+          created_at: new Date(),
+        },
+        include: {
+          receiver: {
+            select: publicUserSelect,
+          },
+        },
+      })
+
+      return jsonSuccess(
+        {
+          friendRequest: {
+            id: renewedRequest.id,
+            status: renewedRequest.status,
+            createdAt: renewedRequest.created_at.toISOString(),
+            respondedAt: renewedRequest.responded_at?.toISOString() ?? null,
+            receiver: serializePublicUser(renewedRequest.receiver)!,
+          },
+        },
+        { status: 201 },
       )
     }
 

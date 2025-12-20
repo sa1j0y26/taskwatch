@@ -2,8 +2,6 @@ import { NextResponse } from "next/server"
 
 import { auth } from "@/auth"
 
-export const runtime = "nodejs"
-
 const PUBLIC_PATHS = new Set([
   "/",
   "/api/auth/signin",

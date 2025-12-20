@@ -5,41 +5,58 @@ export const runtime = "nodejs"
 
 export async function GET() {
   const encoder = new TextEncoder()
+  let cleanup: (() => void) | null = null
 
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
+      let closed = false
+      let keepAlive: ReturnType<typeof setInterval> | null = null
+      let unsubscribe: (() => void) | null = null
+
+      const doCleanup = () => {
+        if (closed) return
+        closed = true
+        if (keepAlive) {
+          clearInterval(keepAlive)
+          keepAlive = null
+        }
+        if (unsubscribe) {
+          unsubscribe()
+          unsubscribe = null
+        }
+      }
+      cleanup = doCleanup
+
       const send = (data: string) => {
-        controller.enqueue(encoder.encode(data))
+        if (closed) return
+        try {
+          controller.enqueue(encoder.encode(data))
+        } catch {
+          doCleanup()
+        }
       }
 
       send(`event: message\n`)
       send(`data: ${JSON.stringify({ type: "ready", payload: null })}\n\n`)
 
-      const unsubscribe = subscribeRealtime((event) => {
+      unsubscribe = subscribeRealtime((event) => {
         send(`event: message\n`)
         send(`data: ${JSON.stringify(event)}\n\n`)
       })
 
-      const keepAlive = setInterval(() => {
+      keepAlive = setInterval(() => {
         send(`: keep-alive ${Date.now()}\n\n`)
       }, 15000)
 
-      controller.enqueue(encoder.encode(": stream-start\n\n"))
+      send(`: stream-start\n\n`)
 
       const signal = (controller as unknown as { signal?: AbortSignal }).signal
       if (signal) {
-        signal.addEventListener(
-          "abort",
-          () => {
-            clearInterval(keepAlive)
-            unsubscribe()
-          },
-          { once: true },
-        )
+        signal.addEventListener("abort", doCleanup, { once: true })
       }
     },
     cancel() {
-      // handled via abort signal; noop
+      cleanup?.()
     },
   })
 

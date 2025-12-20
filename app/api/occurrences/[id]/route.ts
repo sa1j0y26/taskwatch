@@ -9,7 +9,7 @@ import { OccurrenceStatus } from "@prisma/client"
 const MAX_NOTES_LENGTH = 1000
 
 export async function PATCH(request: NextRequest, context: unknown) {
-  const { id } = (context as { params: { id: string } }).params
+  const { id } = await (context as { params: Promise<{ id: string }> }).params
 
   const session = await auth()
 
@@ -156,7 +156,7 @@ export async function PATCH(request: NextRequest, context: unknown) {
 }
 
 export async function DELETE(_request: NextRequest, context: unknown) {
-  const { id } = (context as { params: { id: string } }).params
+  const { id } = await (context as { params: Promise<{ id: string }> }).params
 
   const session = await auth()
 

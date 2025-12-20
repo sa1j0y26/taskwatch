@@ -1,414 +1,75 @@
-# API Specification Draft
+# API Spec (Current)
 
-Taskwatch API の詳細設計ドラフト。Next.js の Route Handler / Server Action を前提とし、REST + WebSocket で提供する。
+Taskwatch の実装に合わせた簡易 API メモ。未実装・構想段階の内容は省いている。
 
-## 1. 共通仕様
+## 共通仕様
 
-- **Base URL (local)**: `http://localhost:3000/api`
-- **認証方式**: Auth.js (NextAuth) のセッションクッキー / JWT。Route Handler では `auth()` でセッションを検証。
-- **レスポンス形式**: すべて JSON。成功時は `data` ルート、失敗時は `error` オブジェクトを返す。
-- **タイムゾーン**: 受信/返却ともに ISO 8601（UTC）。クライアント側でローカルタイムゾーンに変換。
-- **ID**: すべて UUID v7 形式。PostgreSQL 18 の `uuidv7()` を利用。
-- **Pagination**: カーソル方式（`cursor`, `limit`）。`limit` のデフォルトは 20。
-- **ステータスコード**: 成功 2xx、クライアントエラー 4xx、サーバーエラー 5xx。422 をバリデーションエラーに利用。
+- Base URL (local): `http://localhost:3000/api`
+- 認証: Auth.js のセッション Cookie。Route Handler では `auth()` を利用。
+- レスポンス形式: 成功時 `{ "data": ... }` / 失敗時 `{ "error": { "code", "message", "details?" } }`
+- 日付/時刻: ISO 8601 (UTC)
+- ID: UUID (v7)
 
-### 1.1 エラーフォーマット
+## 認証
 
-```json
-{
-  "error": {
-    "code": "EVENT_NOT_FOUND",
-    "message": "Event does not exist or you do not have access.",
-    "details": {}
-  }
-}
-```
+- `/api/auth/[...nextauth]` (Auth.js 標準)
+- `GET /api/auth/session`
+- `POST /api/auth/signout`
 
-`code` はアプリ固有エラーコード。`details` にフィールドエラーなどを格納。
+## プロフィール
 
-## 2. リソース定義
+- `GET /api/me/profile`
+- `PATCH /api/me/profile` (`name`, `avatarColor`)
 
-### 2.1 User
+## ユーザー検索 & フレンド
 
-```json
-{
-  "id": "018f5b78-8c84-7b43-bf53-5b624eca0f0f",
-  "email": "user@example.com",
-  "name": "Yuki",
-  "avatar": "https://...",
-  "xp": 1200,
-  "level": 5,
-  "streakCount": 8,
-  "createdAt": "2024-03-01T10:00:00Z",
-  "updatedAt": "2024-03-20T07:00:00Z"
-}
-```
+- `GET /api/users/search?q=...`
+- `GET /api/friendships`
+- `POST /api/friendships` `{ friendUserId }`
+- `DELETE /api/friendships/:id`
+- `GET /api/friendships/requests?includeHistory=true&direction=received|sent`
+- `PATCH /api/friendships/requests/:id` `{ action: accept | reject | cancel }`
 
-### 2.2 Event
+## イベント
 
-```json
-{
-  "id": "018f5b78-944a-7a1f-b4a6-3f55b5c2f8d2",
-  "userId": "018f5b78-8c84-7b43-bf53-5b624eca0f0f",
-  "title": "Morning Study",
-  "description": "Exam prep",
-  "visibility": "PRIVATE",
-  "durationMinutes": 90,
-  "rrule": "FREQ=DAILY;COUNT=5",
-  "exdates": ["2024-04-01T00:00:00Z"],
-  "createdAt": "2024-03-30T10:00:00Z",
-  "updatedAt": "2024-04-01T07:00:00Z"
-}
-```
+- `GET /api/events?userId&withOccurrences&rangeStart&rangeEnd`
+- `POST /api/events` (`title`, `durationMinutes`, `visibility?`, `tag?`, `description?`, `rrule?`, `exdates?`, `firstOccurrence?`)
+- `GET /api/events/:id?withOccurrences&rangeStart&rangeEnd`
+- `PATCH /api/events/:id` (`title`, `description`, `tag`, `visibility`, `durationMinutes`, `rrule`, `exdates`)
+- `DELETE /api/events/:id`
 
-### 2.3 Occurrence
+## Occurrence
 
-```json
-{
-  "id": "018f5b78-98e0-74f8-beb4-5a40ee0fe5a9",
-  "eventId": "018f5b78-944a-7a1f-b4a6-3f55b5c2f8d2",
-  "userId": "018f5b78-8c84-7b43-bf53-5b624eca0f0f",
-  "startAt": "2024-04-01T09:00:00Z",
-  "endAt": "2024-04-01T10:30:00Z",
-  "status": "DONE",
-  "completedAt": "2024-04-01T10:20:00Z",
-  "notes": "Chapter 3 completed",
-  "createdAt": "2024-03-31T00:00:00Z",
-  "updatedAt": "2024-04-01T10:20:00Z"
-}
-```
+- `GET /api/occurrences?start&end&status&userId`
+- `GET /api/occurrences/pending?before&limit&cursorId`
+- `PATCH /api/occurrences/:id` (`startAt`, `endAt`, `notes`)
+- `DELETE /api/occurrences/:id`
+- `PATCH /api/occurrences/:id/status` (`status: DONE | MISSED`)
 
-### 2.4 TimelinePost & Reaction
+## タイムライン
 
-```json
-{
-  "id": "018f5b78-9d25-7143-8075-8f6a4ab9b343",
-  "userId": "018f5b78-8c84-7b43-bf53-5b624eca0f0f",
-  "occurrenceId": "018f5b78-98e0-74f8-beb4-5a40ee0fe5a9",
-  "message": "Completed math session!",
-  "visibility": "PRIVATE",
-  "createdAt": "2024-04-01T10:21:00Z",
-  "updatedAt": "2024-04-01T10:21:00Z",
-  "reactions": {
-    "likes": 3,
-    "bads": 0,
-    "viewerReaction": "LIKE"
-  }
-}
-```
+- `GET /api/timeline?limit&cursor`
+- `POST /api/timeline` `{ message }`
+- `PATCH /api/timeline/:id` `{ message }`
+- `DELETE /api/timeline/:id`
+- `PATCH /api/timeline/:id/memo` `{ memo }`
+- `POST /api/timeline/:id/reactions` `{ type: LIKE | BAD }`
+- `DELETE /api/timeline/:id/reactions`
 
-### 2.5 RankingEntry
+## ランキング & マイページ集計
 
-```json
-{
-  "userId": "018f5b78-8c84-7b43-bf53-5b624eca0f0f",
-  "name": "Yuki",
-  "avatar": "https://...",
-  "totalMinutes": 540,
-  "pointSum": 125,
-  "completionRate": 0.86,
-  "streakCount": 10,
-  "rank": 1
-}
-```
+- `GET /api/rankings?metric=totalMinutes|completionRate|streak&period=weekly|monthly`
+- `GET /api/stats/mypage?weekStart=YYYY-MM-DD`
 
-## 3. エンドポイント詳細
+## リアルタイム (SSE)
 
-### 3.1 Authentication (Auth.js)
-
-- Auth.js (NextAuth) の Google OAuth プロバイダを利用し、`/api/auth/[...nextauth]` がサインイン/アウト/セッション確認を提供する。
-- クライアント側は `signIn('google')` / `signOut()` を利用。成功時は NextAuth のセッションクッキー（`session.strategy = "jwt"`）がセットされる。
-- Route Handler や Server Action では `auth()` でセッションを取得し、`session?.user.id` を元に認可処理を行う。
-- 独自の `POST /auth/register` エンドポイントは持たず、OAuth によるアカウント作成をそのまま採用する。
-
-#### GET /api/auth/session (Auth.js)
-- **概要**: NextAuth のセッション情報取得。
-- **成功 (200)**: Auth.js の標準レスポンス。
-
-#### POST /api/auth/signout (Auth.js)
-- **概要**: セッション破棄。
-- **成功 (302)**: 既定でリダイレクト。API 経由で使う場合は `redirect: false` を指定。
-
-### 3.2 Users & Friendships
-
-#### GET /users/search
-- **用途**: 友人検索 (名前 / メール).
-- **query**: `q` (必須)。
-- **現状メモ**: 2025-02 時点では最大 10 件、ログインユーザー自身と既存フレンド判定はクライアント側で実施。
-- **認証**: 必須。
-- **成功 (200)**: `{ "data": { "results": [ { "id", "name", "email", "avatar" } ] } }`
-
-#### POST /friendships
-- **用途**: フレンド申請の送信。
-- **body**: `{ "friendUserId": "018f5b78-a1b3-7d86-b154-1d5f6d874a63" }`
-- **処理**:
-  - 申請が相手から届いている場合は自動承認し、`friendship` を返す。
-  - 未申請の場合は `friendRequest` を `PENDING` で作成。
-- **成功 (201)**: `{ "data": { "friendship"?: { ... }, "friendRequest"?: { "id", "status", "createdAt", "receiver": { ... } } } }`
-- **エラー例**: `ALREADY_FRIENDS` (409), `REQUEST_ALREADY_EXISTS` (409)。
-
-#### DELETE /friendships/:id
-- **用途**: 友達解除。
-- **成功 (204)**: ボディなし。
-
-#### GET /friendships
-- **用途**: 追加済みフレンド一覧。
-- **備考**: `friendUser` は常に自分以外のユーザーを返す。結果は作成日時の降順。
-- **成功 (200)**:
-  ```json
-  {
-    "data": {
-      "friendships": [
-        {
-          "id": "018f5b78-a54d-7f56-8e0a-4c97da1c0fcb",
-          "friendUser": {
-            "id": "018f5b78-a1b3-7d86-b154-1d5f6d874a63",
-            "name": "Aoi",
-            "email": "aoi@example.com",
-            "avatar": null
-          },
-          "createdAt": "2025-02-10T12:00:00.000Z"
-        }
-      ]
-    }
-  }
-  ```
-
-#### GET /friendships/requests
-- **用途**: 送受信中のフレンド申請一覧。
-- **query**: `includeHistory` (任意, `true` の場合は過去ステータス含む)。
-- **成功 (200)**:
-  ```json
-  {
-    "data": {
-      "requests": {
-        "received": [
-          {
-            "id": "018f5b78-a54d-7f56-8e0a-4c97da1c0fcb",
-            "status": "PENDING",
-            "createdAt": "2025-02-10T12:00:00.000Z",
-            "respondedAt": null,
-            "requester": { "id": "018f5b78-a1b3-7d86-b154-1d5f6d874a63", "name": "Aoi", "email": "aoi@example.com", "avatar": null }
-          }
-        ],
-        "sent": [
-          {
-            "id": "018f5b78-b21c-7f56-8e0a-4c97da1c0fcb",
-            "status": "PENDING",
-            "createdAt": "2025-02-10T11:00:00.000Z",
-            "respondedAt": null,
-            "receiver": { "id": "018f5b78-c31d-7f56-8e0a-4c97da1c0fcb", "name": "Ren", "email": "ren@example.com", "avatar": null }
-          }
-        ]
-      }
-    }
-  }
-  ```
-
-#### PATCH /friendships/requests/:id
-- **用途**: 申請の承認・拒否・取り消し。
-- **body**: `{ "action": "accept" | "reject" | "cancel" }`
-- **成功 (200)**: `{ "data": { "request": { ... }, "friendship"?: { ... } } }`
-- **エラー例**: `REQUEST_NOT_FOUND` (404), `REQUEST_NOT_PENDING` (409), `FORBIDDEN` (403)。
-
-### 3.3 Events
-
-#### POST /events
-- **用途**: イベントテンプレート作成。
-- **body**:
-  - `title` (必須, 1〜120)
-  - `description` (任意, max 1000)
-  - `tag` (任意, 32 文字以内)
-  - `visibility` (`PRIVATE`/`PUBLIC`)
-  - `durationMinutes` (必須, 5〜1440)
-  - `rrule` (任意, RFC5545)
-  - `exdates` (任意, ISO 配列)
-  - `firstOccurrence` (任意, `{ startAt, endAt, notes? }`。`durationMinutes` と長さが一致する必要あり)
-- **現状メモ**: 2025-02 時点では `rrule` と `firstOccurrence` を組み合わせると初回を含む最大 12 件の occurrence を自動生成（対応頻度: DAILY / WEEKLY）。将来的にはより柔軟な期間設定を検討中。
-- **補足**: `rrule` と `firstOccurrence` を同時に渡すと、初回含め最大 12 件・約 90 日先までの occurrence を自動生成します。
-- **成功 (201)**: `{ "data": { "event": { ...Event } } }`
-
-#### GET /events
-- **用途**: 認証ユーザーやフレンドのイベント一覧取得。
-- **query**:
-  - `withOccurrences` (bool, 最新の occurrences を含めるか)
-  - `rangeStart`, `rangeEnd` (ISO。`withOccurrences=true` 時に指定可能。未指定の場合は当日を起点に 7 日間を返却)
-  - `userId` (任意): フレンド ID。指定時はフレンドシップを検証。
-- **成功 (200)**: `events: Event[]` (`withOccurrences=true` の場合は `event.occurrences` に該当期間の Occurrence を埋め込み)。
-
-#### GET /events/:id
-- **制約**: 所有者 or 承認済みフレンドのみアクセス可。
-- **query**:
-  - `withOccurrences`, `rangeStart`, `rangeEnd` は一覧と同様に利用可能。
-- **成功 (200)**: `{ "data": { "event": { ...Event, "tag"?, occurrences?: Occurrence[] } } }`
-
-#### PATCH /events/:id
-- **用途**: 既存イベントの部分更新。
-- **body**: `title` / `description` / `visibility` / `durationMinutes` / `rrule` / `exdates` (いずれも任意)。
-  - `description`, `rrule`, `exdates` は `null` を渡すと未設定扱いに更新。
-  - `exdates` は ISO 文字列配列のみ受理。
-- **現状メモ**: `rrule` 更新時の自動 occurrence 再生成は未実装。既存 occurrence の整合は別途検討。
-- **成功 (200)**: `{ "data": { "event": { ...Event, "tag"? } } }`
-
-#### DELETE /events/:id
-- **処理**: イベントと紐づく occurrences を削除。
-- **現状メモ**: 2025-02 時点ではハードデリート。統計用途で保持する場合は今後の要件次第で変更。
-- **成功 (204)**: ボディなし。
-
-### 3.4 Occurrences
-
-#### GET /occurrences
-- **用途**: 指定期間内の occurrence 一覧取得。
-- **query**:
-  - `start`/`end` (必須): ISO 文字列。範囲は 31 日以内。
-  - `userId` (任意): 友人 ID を指定すると共有フレンドの occurrence を取得。未指定は自分。
-  - `status` (任意): `SCHEDULED`/`DONE`/`MISSED`。
-- **備考**: `userId` 指定時はフレンドシップを検証し、未承認の場合は 403。
-- **成功 (200)**: `{ "data": { "occurrences": [ { ...Occurrence, "event": { "id", "title", "tag"?, "visibility" } } ] } }`
-
-#### PATCH /occurrences/:id/status
-- **用途**: 完了/未達成の更新。
-- **body**:
-  - `status`: `DONE` | `MISSED`
-  - `completedAt`: `DONE` の場合は必須。ISO 文字列。
-  - `notes`: 任意。最大 1000 文字。
-- **現状メモ**: 2025-02 時点ではポイント加算やストリーク更新は未実装。純粋に occurrence レコードのみ更新。
-- **成功 (200)**: `{ "data": { "occurrence": { ...Occurrence, "event": { "id", "title", "visibility" } } } }`
-- **エラー例**: `OCCURRENCE_NOT_FOUND` (404), `VALIDATION_ERROR` (422)。
-
-#### PATCH /occurrences/:id
-- **用途**: 開始・終了時刻、メモの更新。
-- **body**:
-  - `startAt`, `endAt`: 任意。両方指定時は ISO 文字列で、`endAt` は `startAt` より後。
-  - `notes`: 任意。最大 1000 文字。空文字は `null` 扱い。
-- **備考**: duration が変化した場合はクライアント側で `durationMinutes` を `PATCH /events/:id` に渡して整合性を保つ。
-- **成功 (200)**: `{ "data": { "occurrence": { ...Occurrence, "event": { "id", "title", "tag"?, "visibility" } } } }`
-- **エラー例**: `OCCURRENCE_NOT_FOUND` (404), `VALIDATION_ERROR` (422)。
-
-#### DELETE /occurrences/:id
-- **用途**: 単発 occurrence の削除。
-- **成功 (204)**: ボディなし。
-- **エラー例**: `OCCURRENCE_NOT_FOUND` (404)。
-
-#### POST /occurrences/:id/reset (オプション)
-- **用途**: 誤操作で DONE/MISSED を取り消し、`SCHEDULED` に戻す。（実装するなら）
-
-### 3.5 Timeline & Reactions
-
-#### GET /timeline
-- **query**: `cursor`, `limit` (最大 50), `userId` (任意)
-- **フィルタ**: 可視性チェック。`PUBLIC` の投稿のみ友達外にも表示。
-- **成功 (200)**:
-  ```json
-  {
-    "data": {
-      "items": [
-        {
-          ...TimelinePost,
-          "author": { "id": "018f5b78-8c84-7b43-bf53-5b624eca0f0f", "name": "Yuki", "avatar": null },
-          "occurrence": { "id": "018f5b78-98e0-74f8-beb4-5a40ee0fe5a9", "status": "DONE", "startAt": "..." }
-        }
-      ],
-      "nextCursor": "..."
-    }
-  }
-  ```
-
-#### POST /timeline
-- **body**:
-  - `occurrenceId` (任意): 紐付けたい場合に指定。`null` ならメッセージだけの投稿。
-  - `message` (必須, 1〜280)
-  - `visibility`: `PRIVATE`/`PUBLIC`
-- **成功 (201)**: 作成済み post。
-
-#### POST /timeline/:id/reactions
-- **body**: `{ "type": "LIKE" | "BAD" }`
-- **処理**: 同一ユーザーが再度同じ反応を送った場合は削除扱い、別種なら切り替え。
-- **成功 (200)**: `likes`/`bads`/`viewerReaction` を返却。
-
-#### DELETE /timeline/:id/reactions
-- **用途**: 自分のリアクション解除。
-- **成功 (204)**。
-
-### 3.6 Rankings & Stats
-
-#### GET /ranking
-- **query**:
-  - `periodStart` (任意): 週の開始日。未指定時は現在の週 (月曜始まり想定)。
-  - `limit` (任意): 上位 N 人。未指定は全員。
-- **成功 (200)**:
-  ```json
-  {
-    "data": {
-      "period": {
-        "start": "2024-04-01",
-        "end": "2024-04-07"
-      },
-      "entries": [ ...RankingEntry ]
-    }
-  }
-  ```
-- **計算**: Occurrence の `status` と予定時間に応じてポイント・完遂率を集計。固定ポイントは DONE:+25, MISSED:-10。
-
-#### GET /stats/mypage
-- **用途**: マイページ表示用集計。
-- **内容**:
-  - `weeklyTotals`: 日付ごとの合計時間・完了数
-  - `completionPerDay`: 曜日別の遂行率
-  - `currentLevel`, `xp`, `xpToNextLevel`
-  - `streakCount`
-  - `nextMilestones`: 次のレベル/ストリーク達成条件
-- **成功 (200)**: `{ "data": { ... } }`
-
-## 4. Realtime API (WebSocket)
-
-- **エンドポイント**: `ws://localhost:3000/realtime`
-- **認証**: 接続時に `Authorization` ヘッダー or クエリ `token`。
-- **イベント**:
-  - `timeline.posted`
-    ```json
-    {
-      "type": "timeline.posted",
-      "payload": { "post": { ...TimelinePost }, "author": { ... } }
-    }
-    ```
-  - `occurrence.updated`
-    ```json
-    {
-      "type": "occurrence.updated",
-      "payload": { "occurrence": { ...Occurrence }, "meta": { "streakCount": 10 } }
-    }
-    ```
-  - `ranking.updated`
-    ```json
-    {
-      "type": "ranking.updated",
-      "payload": { "entries": [ ...RankingEntry ] }
-    }
-    ```
-- **再接続**: クライアントは last event time を保持し、再接続後に REST で差分取得。
-
-## 5. エラーコード一覧（暫定）
-
-| code | 説明 | HTTP |
-| --- | --- | --- |
-| `INVALID_CREDENTIALS` | メール/パスワード不一致 | 401 |
-| `USER_ALREADY_EXISTS` | 登録済み | 409 |
-| `EVENT_NOT_FOUND` | イベントが存在しない | 404 |
-| `FORBIDDEN` | アクセス権なし | 403 |
-| `INVALID_STATUS_TRANSITION` | 状態遷移エラー | 422 |
-| `FRIENDSHIP_ALREADY_EXISTS` | 既にフレンド関係が存在 | 409 |
-| `FRIENDSHIP_NOT_FOUND` | フレンド関係が存在しない | 404 |
-| `TIMELINE_NOT_FOUND` | 投稿が存在しない | 404 |
-
-## 6. 未決事項 / TODO
-
-1. **Occurrence リセット API**: 誤タップ時に `SCHEDULED` へ戻せるフローが必要か検討。
-2. **可視性ルール詳細**: `PUBLIC` をどこまで許可するか（フレンド以外に公開する UI があるか）。
-3. **ポイント計算の拡張**: 将来的にイベントごとにポイント倍率を持たせるか。
-4. **通知エンドポイント**: 今後 push 通知を導入するかどうか。
-5. **Rate Limit**: ログイン/友達招待に対する制限値の決定。
-
----
-
-この仕様をベースに Next.js の Route Handler 用スキーマ（Zod 等）を整備し、開発と同時に更新していく。EOF
+- `GET /api/realtime`
+- EventSource で接続。`event: message` の `data` に `{ type, payload }` を送信。
+- 15 秒ごとに keep-alive のコメントを送信。
+- イベント種別:
+  - `timeline.posted` `{ post }`
+  - `timeline.updated` `{ post }`
+  - `timeline.deleted` `{ postId }`
+  - `timeline.reacted` `{ postId, reactions: { likes, bads } }`
+  - `occurrence.status_changed` `{ occurrenceId, status, timelineKind }`
+  - `ready` `{ payload: null }`
