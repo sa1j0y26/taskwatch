@@ -16,7 +16,7 @@ import type { NextRequest } from "next/server"
 export const runtime = "nodejs"
 
 export async function GET(request: NextRequest, context: unknown) {
-  const { id } = (context as { params: { id: string } }).params
+  const { id } = await (context as { params: Promise<{ id: string }> }).params
 
   const session = await auth()
 
@@ -94,7 +94,7 @@ export async function GET(request: NextRequest, context: unknown) {
 }
 
 export async function PATCH(request: NextRequest, context: unknown) {
-  const { id } = (context as { params: { id: string } }).params
+  const { id } = await (context as { params: Promise<{ id: string }> }).params
 
   const session = await auth()
 
@@ -258,7 +258,7 @@ export async function PATCH(request: NextRequest, context: unknown) {
 }
 
 export async function DELETE(_request: NextRequest, context: unknown) {
-  const { id } = (context as { params: { id: string } }).params
+  const { id } = await (context as { params: Promise<{ id: string }> }).params
 
   const session = await auth()
 

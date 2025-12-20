@@ -25,10 +25,7 @@ export async function GET(request: NextRequest) {
     const users = await prisma.user.findMany({
       where: {
         id: { not: viewerId },
-        OR: [
-          { name: { contains: query, mode: "insensitive" } },
-          { email: { contains: query, mode: "insensitive" } },
-        ],
+        email: { equals: query, mode: "insensitive" },
       },
       orderBy: { name: "asc" },
       take: MAX_RESULTS,

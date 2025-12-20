@@ -12,7 +12,7 @@ const REQUEST_STATUSES = {
 } as const
 
 export async function PATCH(request: NextRequest, context: unknown) {
-  const { id } = (context as { params: { id: string } }).params
+  const { id } = await (context as { params: Promise<{ id: string }> }).params
 
   const session = await auth()
 

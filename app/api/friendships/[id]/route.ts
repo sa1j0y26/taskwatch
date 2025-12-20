@@ -5,7 +5,7 @@ import { jsonErrorWithStatus } from "@/lib/api-response"
 import { prisma } from "@/lib/prisma"
 
 export async function DELETE(_request: NextRequest, context: unknown) {
-  const { id } = (context as { params: { id: string } }).params
+  const { id } = await (context as { params: Promise<{ id: string }> }).params
 
   const session = await auth()
 

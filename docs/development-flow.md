@@ -23,7 +23,7 @@
 4. **バックエンド実装フェーズ**
    - 認証・ユーザー管理 → イベントCRUD → occurrence 状態更新 → ランキング集計 → タイムライン投稿の順で機能追加。
    - 機能ごとにユニット/E2E テストとエラーハンドリングを整備。
-   - WebSocket/Supabase Realtime を使った即時反映の PoC を試し、必要なら拡張。
+   - SSE (EventSource) を使った即時反映の PoC を試し、必要なら拡張。
 
 5. **フロントエンド実装フェーズ**
    - ページルーティング（`/mypage`, `/calendar`, `/ranking`, `/timeline`）を scaffold。
