@@ -160,11 +160,7 @@ export default function TimelinePage() {
         if (parsed.type === "timeline.posted" && parsed.payload?.post) {
           setPosts((prev) => {
             const incoming = parsed.payload.post
-            const exists = prev.some((post) => post.id === incoming.id)
-            if (exists) {
-              return prev
-            }
-            return [incoming, ...prev]
+            return [incoming, ...prev.filter((post) => post.id !== incoming.id)]
           })
         } else if (parsed.type === "timeline.updated" && parsed.payload?.post) {
           setPosts((prev) => {
@@ -278,7 +274,7 @@ export default function TimelinePage() {
 
       if (body?.data?.post) {
         const nextPost = body.data.post
-        setPosts((prev) => [nextPost, ...prev])
+        setPosts((prev) => [nextPost, ...prev.filter((post) => post.id !== nextPost.id)])
       }
       setNewMessage("")
     } catch (err) {

@@ -1,33 +1,47 @@
 # Taskwatch
 
-## ローカル開発環境の起動
+A habit-tracking dashboard built with Next.js, Prisma, and PostgreSQL.
 
-Docker Compose を利用して Next.js と PostgreSQL を立ち上げます。
+## Quick Start
 
-### 前提条件
-
-- Docker Desktop など Docker が動作する環境
-- `docker compose` コマンド（v2 系）
-
-### 手順
-
-1. 必要であれば `.env` をプロジェクト直下に作成し、ホスト側ポートを変えたい場合は `WEB_PORT` を指定（デフォルトは 3000）。
-2. コンテナ起動:
+1. **Install deps**
    ```bash
-   docker compose up -d --build
+   npm install
    ```
-3. Prisma マイグレーション（初回のみ任意の名前で）:
+2. **Configure env**
    ```bash
-   docker compose exec web npx prisma migrate dev --name init
+   cp env.example .env
    ```
-   - PostgreSQL 18 では `uuidv7()` が標準提供されるため追加拡張は不要です。
-4. ブラウザでアプリを確認: <http://localhost:${WEB_PORT:-3000}>
+3. **Boot the database**
+   ```bash
+   docker compose up -d db
+   ```
+4. **Apply Prisma migrations**
+   ```bash
+   npx prisma migrate dev
+   ```
+5. **Run the app**
+   ```bash
+   npm run dev
+   ```
+   Visit <http://localhost:3000>.
 
-### よく使うコマンド
+## Scripts
 
-- ログ確認: `docker compose logs -f web`
-- Prisma Studio: `docker compose exec web npx prisma studio`
-- コンテナ停止: `docker compose down`
-- データベース初期化: `docker compose down --volumes`
+| Command            | Purpose                              |
+| ------------------ | ------------------------------------ |
+| `npm run dev`      | Start Next.js in dev mode            |
+| `npm run lint`     | ESLint (flat config)                 |
+| `npm test`         | Vitest API suite                     |
+| `npm run build`    | Production build                     |
+| `npx prisma studio`| Inspect/edit data via Prisma Studio  |
 
-詳細なセットアップ手順は `docs/setup-guide.md` を参照してください。
+## Database Notes
+
+- Compose only spins up PostgreSQL (mapped to `localhost:65432`).
+- Data lives in the `taskwatch_postgres_data` named volume so it won't collide with other projects.
+- Tear down everything with `docker compose down --volumes`.
+
+## More Info
+
+See `docs/setup-guide.md` for deeper setup details, troubleshooting, and tips.
